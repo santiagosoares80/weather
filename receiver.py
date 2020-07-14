@@ -2,7 +2,7 @@ import pigpio
 import vw
 import time
 
-RXPin = 20
+RXPin = 27
 rate = 2000
 
 pi = pigpio.pi()
