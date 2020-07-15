@@ -1,4 +1,4 @@
-#include "DHT.h"
+  #include "DHT.h"
 #include <RH_ASK.h>
 #include <stdlib.h>
 
@@ -26,7 +26,7 @@ void setup() {
 
 void loop() {
   // Wait a few seconds between measurements.
-  delay(5000);
+  delay(1000);
   
   // Read humidity
   float h = dht.readHumidity();
@@ -48,16 +48,20 @@ void loop() {
   Serial.println(F("°C "));
 
   // Convert floats to strings
-  char temp[10];
-  dtostrf(t, 4, 1, temp);
+  char temp[5];
+  dtostrf(t, 3, 1, temp);
   char humidity[5];
-  dtostrf(h, 4, 1, humidity);
+  dtostrf(h, 3, 1, humidity);
 
   // Try to transmit temperature
   if(!radio.send((uint8_t*)temp, sizeof(temp))) {
     Serial.println(F("Transmission of temperature failed!"));
     return;
   }
+  
+  // Wait a little bit before transmiting humidity
+  delay(200);
+  
   //Try to transmit humidity
   if(!radio.send((uint8_t*)humidity, sizeof(humidity))) {
     Serial.println(F("Transmission of humidity failed!"));
