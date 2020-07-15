@@ -10,13 +10,14 @@ receiver = vw.rx(pi, RXPin, rate)
 
 start = time.time()
 
-for i in range(60):
+print("Starting receiver")
+while True:
 	while receiver.ready():
-		print("Iteration")
-		print("".join(chr (c) for c in receiver.get()))
-
-	time.sleep(1)
-	print(i)
+		message = "".join(chr(c) for c in receiver.get())
+		# First 2 chars of message are 0xff 0xff, don't know why, just discard them
+		message = message[2:]
+		print(message)
+	time.sleep(2)
 
 receiver.cancel()
 pi.stop()
