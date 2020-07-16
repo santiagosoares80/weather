@@ -43,7 +43,7 @@ void setup() {
 
 void loop() {
   // Wait a few seconds between measurements.
-  delay(1000);
+  delay(3000);
   
   // Read humidity
   float h = dht.readHumidity();
@@ -80,7 +80,7 @@ void loop() {
   }
   
   // Wait a little bit before transmiting humidity
-  delay(200);
+  delay(500);
 
   //Set flag to humidity message
   manager.setHeaderFlags(HUMIDFLAG, CLEARFLAG);
