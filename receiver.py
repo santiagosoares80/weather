@@ -13,9 +13,9 @@ start = time.time()
 print("Starting receiver")
 while True:
 	while receiver.ready():
-		message = "".join(chr(c) for c in receiver.get())
+		message = " ".join(hex(c) for c in receiver.get())
 		# First 2 chars of message are 0xff 0xff, don't know why, just discard them
-		message = message[2:]
+		# message = message[2:]
 		print(message)
 	time.sleep(2)
 
