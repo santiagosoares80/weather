@@ -1,6 +1,9 @@
 import pigpio
 import vw
 import time
+import sqlite3
+
+from datetime import datetime
 
 #GPIO pin for receiver
 RXPin = 27
@@ -18,7 +21,7 @@ print("Starting receiver")
 
 #Runs forever listening to messages
 while True:
-	time.sleep(0.5)
+	time.sleep(0.1)
 	message = []
 
 	#Receive message, a list of Ints
@@ -38,8 +41,8 @@ while True:
 		print("Message not to server")
 		continue
 
-	#Get source
-	source = message[1]
+	#Get source probe
+	probe = message[1]
 
 	#Get flags
 	flags = message[3]
@@ -47,13 +50,33 @@ while True:
 	#Get content of the message as a string
 	content = "".join(chr(c) for c in message[4:])
 
-	#print content of the message
+	#Open connection with database because we are going to insert something
+	conn = sqlite3.connect("weather.db")
+
+	#Enable foreign keys at sqlite3, on a per connection basis
+	conn.execute("PRAGMA foreign_keys = ON")
+	c = conn.cursor()
+
+	#It's a control message (flags > 15)
+	if flags > 15:
+		c.execute("INSERT INTO events (event_type_id, probe_id, log, datetime) VALUES (?, ?, ?, ?)", 
+				(flags, probe, content, datetime.now().strftime("%H:%M:%S %d/%m/%y")))
+	#It's a measurement
+	else:
+		c.execute("INSERT INTO measurements (measurement_type, probe_id, value, datetime) VALUES (?, ?, ?, ?)",
+				(flags, probe, content, datetime.now().strftime("%H:%M:%S %d/%m/%y")))
+
+	#Commit and close connection
+	conn.commit()
+	conn.close()
+
+
 	if flags == 16:
-		print(f"We received a control message from {source}: {content}.")
+		print(f"We received a control message from {probe}: {content}.")
 	elif flags == 1:
-		print(f"We received temperature from {source}: {content}ºC")
+		print(f"We received temperature from {probe}: {content}ºC")
 	elif flags == 2:
-		print(f"We received humidity from {source}: {content}%")
+		print(f"We received humidity from {probe}: {content}%")
 	else:
 		print("We received an unexpected message")
 
