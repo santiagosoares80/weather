@@ -6,7 +6,7 @@
 #define DHTPIN 2     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT11
 
-#define RXPIN 12
+#define RXPIN 13
 #define TXPIN 12
 #define SPEED 2000
 #define MYADDRESS 0x0A
@@ -18,7 +18,7 @@
 #define HUMIDFLAG 0x02
 
 DHT dht(DHTPIN, DHTTYPE);
-RH_ASK radio(2000, RXPIN, TXPIN);
+RH_ASK radio(SPEED, RXPIN, TXPIN);
 RHDatagram manager(radio, MYADDRESS);
 
 void setup() {
@@ -80,7 +80,7 @@ void loop() {
   }
   
   // Wait a little bit before transmiting humidity
-  delay(500);
+  delay(1000);
 
   //Set flag to humidity message
   manager.setHeaderFlags(HUMIDFLAG, CLEARFLAG);
