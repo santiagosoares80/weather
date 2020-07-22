@@ -39,8 +39,11 @@ void setup() {
     Serial.println(F("Transmission of reboot message failed!"));
     return;
   }
+  //Waits for message to be transmited
+  manager.waitPacketSent();
 }
 
+int id = 0;
 void loop() {
   // Wait a few seconds between measurements.
   delay(3000);
@@ -70,24 +73,41 @@ void loop() {
   char humidity[5];
   dtostrf(h, 3, 1, humidity);
 
+  //Set message ID
+  manager.setHeaderId((uint8_t)id);
+  
   //Set flag to temperature message
   manager.setHeaderFlags(TEMPFLAG, CLEARFLAG);
   
-  // Try to transmit temperature
-  if(!manager.sendto((uint8_t*)temp, sizeof(temp), SERVER)) {
-    Serial.println(F("Transmission of temperature failed!"));
-    return;
+  // Try 5 times to transmit temperature
+  for (int i = 0; i < 5; i++) {
+    //Send message
+    if(!manager.sendto((uint8_t*)temp, sizeof(temp), SERVER)) {
+      Serial.println(F("Transmission of temperature failed!"));
+      return;
+    }
+    //Waits message to be transmited
+    manager.waitPacketSent();
+    //Waits 200ms to try again
+    delay(200);
   }
   
-  // Wait a little bit before transmiting humidity
-  delay(1000);
-
   //Set flag to humidity message
   manager.setHeaderFlags(HUMIDFLAG, CLEARFLAG);
-  
-  //Try to transmit humidity
-  if(!manager.sendto((uint8_t*)humidity, sizeof(humidity), SERVER)) {
-    Serial.println(F("Transmission of humidity failed!"));
-    return;
+
+  // Try 5 times to transmit humidity
+  for (int i = 0; i < 5; i++) {
+    //Send message
+    if(!manager.sendto((uint8_t*)humidity, sizeof(humidity), SERVER)) {
+      Serial.println(F("Transmission of humidity failed!"));
+      return;
+    }
+    //Waits message to be transmited
+    manager.waitPacketSent();  
+    //Waits 200ms to try again 
+    delay(200);
   }
+
+  //Increments message id
+  id++;
 }
