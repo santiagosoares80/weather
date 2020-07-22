@@ -19,9 +19,14 @@ receiver = vw.rx(pi, RXPin, rate)
 
 print("Starting receiver")
 
+#Set redundant check variables
+lastprobe = 0
+lastid = 0
+lastflag = 0
+
 #Runs forever listening to messages
 while True:
-	time.sleep(0.1)
+	time.sleep(0.5)
 	message = []
 
 	#Receive message, a list of Ints
@@ -44,8 +49,19 @@ while True:
 	#Get source probe
 	probe = message[1]
 
+	#Get message ID
+	id = message[2]
+
 	#Get flags
 	flags = message[3]
+
+	#Check if it is not a redundant message
+	if (probe == lastprobe and id == lastid and flags == lastflag):
+		print("Redundant message")
+		continue
+
+	#Set redundancy check variables
+	lastprobe, lastid, lastflag = probe, id, flags
 
 	#Get content of the message as a string
 	content = "".join(chr(c) for c in message[4:])
