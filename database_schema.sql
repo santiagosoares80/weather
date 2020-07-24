@@ -5,7 +5,8 @@ CREATE TABLE probes (
 
 CREATE TABLE capabilities (
 	id INTEGER NOT NULL PRIMARY KEY,
-	description TEXT NOT NULL
+	description TEXT NOT NULL,
+	unit TEXT
 );
 
 CREATE TABLE event_types (
