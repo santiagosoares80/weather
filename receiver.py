@@ -67,7 +67,7 @@ while True:
 	content = "".join(chr(c) for c in message[4:])
 
 	#Open connection with database because we are going to insert something
-	conn = sqlite3.connect("weather.db")
+	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
 
 	#Enable foreign keys at sqlite3, on a per connection basis
 	conn.execute("PRAGMA foreign_keys = ON")
