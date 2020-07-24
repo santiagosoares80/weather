@@ -21,6 +21,9 @@ DHT dht(DHTPIN, DHTTYPE);
 RH_ASK radio(SPEED, RXPIN, TXPIN);
 RHDatagram manager(radio, MYADDRESS);
 
+//Set initial value of message id
+uint8_t id = 0;
+
 void setup() {
   Serial.begin(9600);
   Serial.println(F("Starting DHT11"));
@@ -33,21 +36,28 @@ void setup() {
 
   //Set flag to control message
   manager.setHeaderFlags(CONTROLFLAG, CLEARFLAG);
-  
-  //Send alarm message informing reboot of the probe
-  if(!manager.sendto((uint8_t*)REBOOTMESSAGE, sizeof(REBOOTMESSAGE), SERVER)) {
-    Serial.println(F("Transmission of reboot message failed!"));
-    return;
+
+  //Set message ID
+  manager.setHeaderId((uint8_t)id);
+
+  //Tries 5 times to send the control message
+  for (int i = 0; i < 5; i++) {
+    if(!manager.sendto((uint8_t*)REBOOTMESSAGE, sizeof(REBOOTMESSAGE), SERVER)) {
+      Serial.println(F("Transmission of reboot message failed!"));
+      return;
+    }
+    
+    //Waits message to be transmited
+    manager.waitPacketSent();
+    
+    //Waits 200ms to try again
+    delay(500);
   }
-  //Waits for message to be transmited
-  manager.waitPacketSent();
+  
 }
 
-int id = 0;
 void loop() {
-  // Wait a few seconds between measurements.
-  delay(3000);
-  
+
   // Read humidity
   float h = dht.readHumidity();
   
@@ -89,7 +99,7 @@ void loop() {
     //Waits message to be transmited
     manager.waitPacketSent();
     //Waits 200ms to try again
-    delay(200);
+    delay(500);
   }
   
   //Set flag to humidity message
@@ -105,9 +115,12 @@ void loop() {
     //Waits message to be transmited
     manager.waitPacketSent();  
     //Waits 200ms to try again 
-    delay(200);
+    delay(500);
   }
 
   //Increments message id
   id++;
+
+  // Wait a 15 minutes between measurements.
+  delay(900000);
 }
