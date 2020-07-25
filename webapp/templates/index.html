@@ -12,11 +12,11 @@
           <div class="card" style="width: 18rem;">
             <img src="/static/images/arduino.jpg" class="card-img-top" alt="Arduino">
             <div class="card-body">
-              <h5 class="card-title">{{ card[0] }}</h5>
-              {% for data in card[1] %}
+              <h5 class="card-title">{{ card[1] }}</h5>
+              {% for data in card[2] %}
                 <p class="card-text">{{ data[0] }}: {{ data[1] }}{{ data[2] }}   {{ data[3] }}</p>
               {% endfor %}
-              <a href="#" class="btn btn-primary">Graphs</a>
+              <a href="/graphs?probe={{ card[0] }}" class="btn btn-primary">Graphs</a>
             </div>
           </div>
         </td>

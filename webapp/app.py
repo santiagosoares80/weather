@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import sqlite3
 import datetime
 
@@ -49,12 +49,36 @@ def index():
 			data[3] = datetime.datetime.strptime(data[3], "%H:%M:%S %d/%m/%y").strftime("%H:%M")
 
 		# Insert each probe with the last measurements to the cards list
-		cards.append([ probe[1], lastdata])
+		cards.append([ probe[0], probe[1], lastdata])
 
 	# Close connection to the database
 	conn.close()
 
 	return render_template("index.html", cards = cards)
+
+@app.route("/graphs")
+def graphs():
+
+	# Get probe ID from args of URL
+	probe = request.args.get('probe')
+
+	# Open connection with database
+	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+	# Enable foreign keys on sqlite3
+	conn.execute("PRAGMA foreign_keys = ON")
+	c = conn.cursor()
+
+	# Get data from the last 24h
+	last24h = c.execute("SELECT value, datetime FROM measurements \
+				WHERE probe_id = ? AND measurement_type = 1 and datetime > strftime('%H:%M:%S %d/%m/%y', 'now', '-1 day')", (probe,)).fetchall()
+	print(last24h)
+
+	#Close connection to the database
+	conn.close()
+
+	return "Correct!"
+
 
 if __name__ == '__main__':
 	app.run(debug=False, port = 80, host = '0.0.0.0')
