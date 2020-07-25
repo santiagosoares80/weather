@@ -3,8 +3,6 @@ import vw
 import time
 import sqlite3
 
-from datetime import datetime
-
 #GPIO pin for receiver
 RXPin = 27
 
