@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request
 import sqlite3
 import datetime
+import matplotlib.pyplot as plt
+import io
+import base64
 
 app = Flask (__name__)
 
@@ -46,7 +49,7 @@ def index():
 		# Remove '\x00' from end of values and format time of last measurement
 		for data in lastdata:
 			data[1] = data[1].replace('\x00','')
-			data[3] = datetime.datetime.strptime(data[3], "%H:%M:%S %d/%m/%y").strftime("%H:%M")
+			data[3] = datetime.datetime.strptime(data[3], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
 
 		# Insert each probe with the last measurements to the cards list
 		cards.append([ probe[0], probe[1], lastdata])
@@ -69,16 +72,17 @@ def graphs():
 	conn.execute("PRAGMA foreign_keys = ON")
 	c = conn.cursor()
 
-	# Get data from the last 24h
-	last24h = c.execute("SELECT value, datetime FROM measurements \
-				WHERE probe_id = ? AND measurement_type = 1 and datetime > strftime('%H:%M:%S %d/%m/%y', 'now', '-1 day')", (probe,)).fetchall()
-	print(last24h)
+	# Get probe capabilities
+	capabilities = c.execute("SELECT cp.description FROM capabilities AS cp JOIN probe_capabilities AS pc \
+                                  ON cp.id = pc.capability_id WHERE pc.probe_id = ?", (probe,)).fetchall()
+
+	# Transform tuples in list
+	capabilities = [capability[0].replace("'","") for capability in capabilities]
 
 	#Close connection to the database
 	conn.close()
 
-	return "Correct!"
-
+	return render_template('graphs.html', probe=probe, capabilities=capabilities)
 
 if __name__ == '__main__':
 	app.run(debug=False, port = 80, host = '0.0.0.0')

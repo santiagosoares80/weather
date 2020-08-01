@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}
+        Graphs for probe {{ probe }}
+{% endblock %}
+
+{% block main %}
+	<h3>Last 24h</h3>
+	{% for capability in capabilities %}
+		<img src="/static/images/{{ probe }}_{{ capability }}_1.png">
+	{% endfor %}
+	<h3>Last 7 days</h3>
+        {% for capability in capabilities %}
+                <img src="/static/images/{{ probe }}_{{ capability }}_7.png">
+        {% endfor %}
+        <h3>Last 30 days</h3>
+        {% for capability in capabilities %}
+                <img src="/static/images/{{ probe }}_{{ capability }}_30.png">
+        {% endfor %}
+
+{% endblock %}
