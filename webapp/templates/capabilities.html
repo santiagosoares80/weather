@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Capabilities
+{% endblock %}
+
+{% block main %}
+    <div class="mx-auto pt-4" style="width: 50%">
+    <table class="table text-center">
+        <thead class="thead-light">
+            <tr>
+                <th>#</th>
+                <th>Capability</th>
+                <th>Unit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for capability in capabilities %}
+                <tr>
+                    <td>{{ capability[0] }}</td>
+                    <td>{{ capability[1] }}</td>
+                    <td>{{ capability[2] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="text-right">
+        <a class="btn btn-primary" role="button" href="/addcap">Add capability</a>
+    </div>
+    </div>
+{% endblock %}

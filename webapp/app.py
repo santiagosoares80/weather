@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, flash
 import sqlite3
 import datetime
 import matplotlib.pyplot as plt
@@ -9,6 +9,9 @@ app = Flask (__name__)
 
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+# Set secret key to sign cookies
+app.secret_key = b'B6Nw8elUskuG1dZNGLwGbA'
 
 # Ensure responses aren't cached
 @app.after_request
@@ -84,5 +87,65 @@ def graphs():
 
 	return render_template('graphs.html', probe=probe, capabilities=capabilities)
 
-if __name__ == '__main__':
-	app.run(debug=False, port = 80, host = '0.0.0.0')
+
+@app.route("/capabilities")
+def capabilities():
+	# Open connection with database
+	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+	# Enable foreign keys on sqlite3
+	conn.execute("PRAGMA foreign_keys = ON")
+	c = conn.cursor()
+
+	# Get capabilities
+	capabilities = c.execute("SELECT id, description, unit FROM capabilities").fetchall()
+
+	# Close connection to the database
+	conn.close()
+
+	return render_template('capabilities.html', capabilities = capabilities)
+
+
+@app.route("/addcap", methods=["GET", "POST"])
+def add_cap():
+
+	# User reaches via POST method
+	if request.method == "POST":
+		# Ensure fields are not empty
+		if not request.form.get("capability") or not request.form.get("unit"):
+			flash("Fields must not be empty")
+			return render_template('addcap.html')
+
+		newcap = request.form.get("capability")
+		unit = request.form.get("unit")
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Check if capability exist
+		capability = c.execute("SELECT id FROM capabilities WHERE description = ?", (newcap,)).fetchone()
+		if not capability is None:
+			flash("Capability already exist")
+			return render_template('addcap.html')
+
+		# Insert capability into database
+		c.execute("INSERT INTO capabilities (description, unit) VALUES (?, ?)", (newcap,unit))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to the database
+		conn.close()
+
+		# Get back to capabilities
+		return redirect("/capabilities")
+		
+	else:
+		return render_template('addcap.html')
+
+if __name__ == '__main__': app.run(debug=False, port = 80, host = '0.0.0.0')
+
