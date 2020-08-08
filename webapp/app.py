@@ -4,14 +4,18 @@ import datetime
 import matplotlib.pyplot as plt
 import io
 import base64
-
+import os
 app = Flask (__name__)
 
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-# Set secret key to sign cookies
-app.secret_key = b'B6Nw8elUskuG1dZNGLwGbA'
+# Set secret key
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("No SECRET_KEY set for Flask application")
+else:
+    app.secret_key = SECRET_KEY
 
 # Ensure responses aren't cached
 @app.after_request
@@ -88,22 +92,30 @@ def graphs():
 	return render_template('graphs.html', probe=probe, capabilities=capabilities)
 
 
-@app.route("/capabilities")
+@app.route("/capabilities", methods=["GET", "POST"])
 def capabilities():
-	# Open connection with database
-	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+	# User wants to delete a capability
+	if request.method == "POST":
+		# Get what capability the user wants to delete
+		cap = request.form.get('capability')
+		
+		return f"Deleted capability {cap}"
 
-	# Enable foreign keys on sqlite3
-	conn.execute("PRAGMA foreign_keys = ON")
-	c = conn.cursor()
+	if request.method == "GET":
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
 
-	# Get capabilities
-	capabilities = c.execute("SELECT id, description, unit FROM capabilities").fetchall()
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
 
-	# Close connection to the database
-	conn.close()
+		# Get capabilities
+		capabilities = c.execute("SELECT id, description, unit FROM capabilities").fetchall()
 
-	return render_template('capabilities.html', capabilities = capabilities)
+		# Close connection to the database
+		conn.close()
+
+		return render_template('capabilities.html', capabilities = capabilities)
 
 
 @app.route("/addcap", methods=["GET", "POST"])
@@ -147,5 +159,5 @@ def add_cap():
 	else:
 		return render_template('addcap.html')
 
-if __name__ == '__main__': app.run(debug=False, port = 80, host = '0.0.0.0')
+if __name__ == '__main__': app.run(debug=True, port = 80, host = '0.0.0.0')
 
