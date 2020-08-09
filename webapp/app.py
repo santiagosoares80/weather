@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, flash, url_for
+from flask import Flask, render_template, request, redirect, flash, url_for, session
+from werkzeug.security import check_password_hash, generate_password_hash
 import sqlite3
 import datetime
 import matplotlib.pyplot as plt
 import io
 import base64
 import os
+from functools import wraps
 
 app = Flask (__name__)
 
@@ -26,7 +28,17 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+# From: https://flask.palletsprojects.com/en/1.1.x/patterns/viewdecorators/
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('user_id') is None:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route("/")
+@login_required
 def index():
 	# Open connection with database
 	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
@@ -113,11 +125,26 @@ def capabilities():
 		# If any probe implements the capability, we cannot delete
 		if not probe is None:
 			flash("This capability is used by some probe and cannot be deleted")
+			conn.close()
+			return redirect(url_for('capabilities'))
 		else:
-			flash("This capability is not used by any probe and will be deleted")
+			# The capability is not used by any probe, let's delete it
+			c.execute("DELETE FROM capabilities WHERE id = ?", (capability,))
 
-		conn.close()
-		return redirect(url_for('capabilities'))
+			# Check if the capability was deleted
+			if c.rowcount == 1:
+				flash("The capability was deleted succesfully")
+			else:
+				flash("Something went wrong and the capability was not deleted")
+
+			# Commit modifications
+			conn.commit()
+
+			# Close connection
+			conn.close()
+
+			# Return to capabilities screen
+			return redirect(url_for('capabilities'))
 
 	if request.method == "GET":
 		# Open connection with database
@@ -173,9 +200,71 @@ def add_cap():
 
 		# Get back to capabilities
 		return redirect("/capabilities")
-		
+
 	else:
 		return render_template('addcap.html')
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+	"""Log user in"""
+
+	# Forget any user_id
+	session.clear()
+
+	# User reached route via POST (as by submitting a form via POST)
+	if request.method == "POST":
+
+		# Ensure username was submitted
+		if not request.form.get("username"):
+			flash("Must provide a username")
+			return render_template('login.html')
+
+		# Ensure password was submitted
+		elif not request.form.get("password"):
+			flash("Must provide a password")
+			return render_template('login.html')
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Query database for username
+		rows = c.execute("SELECT id, username, hash, admin FROM users WHERE username = ?", (request.form.get("username"),)).fetchone()
+
+		# Close database connection
+		conn.close()
+		app.logger.info(rows)
+		# Ensure username exists and password is correct
+		if rows is None or not check_password_hash(rows[2], request.form.get("password")):
+			flash("Invalid username and/or password")
+			return render_template('login.html')
+
+		# Remember which user has logged in
+		session["user_id"] = rows[0]
+		session["username"] = rows[1]
+		session["admin"] = rows[3]
+
+		# Redirect user to home page
+		return redirect("/")
+
+	# User reached route via GET (as by clicking a link or via redirect)
+	else:
+		return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+	"""Log user out"""
+
+	# Forget any user_id
+	session.clear()
+
+	# Redirect user to login form
+	return redirect("/")
+
 
 if __name__ == '__main__': app.run(debug=True, port = 80, host = '0.0.0.0')
 

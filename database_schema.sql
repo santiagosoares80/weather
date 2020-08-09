@@ -42,6 +42,15 @@ CREATE TABLE measurements (
 	FOREIGN KEY (probe_id, measurement_type) REFERENCES probe_capabilities(probe_id, capability_id)
 );
 
+CREATE TABLE users (
+	id INTEGER NOT NULL PRIMARY KEY,
+	first_name TEXT,
+	last_name TEXT,
+	username TEXT NOT NULL,
+	hash TEXT NOT NULL,
+	admin INTEGER NOT NULL
+);
+
 CREATE INDEX measurement ON measurements(measurement_type, probe_id, datetime);
 
 CREATE INDEX event_probe ON events(probe_id);
