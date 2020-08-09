@@ -13,11 +13,6 @@ $(document).ready(function(){
 		$('<form action="/capabilities" method="POST">' +
 		  '<input type="hidden" name="capability" value="' + capdel  + '">' +
 		  '</form>').appendTo($(document.body)).submit();
-		//$.ajax({
-		//  type: "POST",
-		//  url: "/capabilities",
-		//  data: {capability: capdel}
-		//});
 	});
 });
 
