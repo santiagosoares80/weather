@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash, url_for
 import sqlite3
 import datetime
 import matplotlib.pyplot as plt
 import io
 import base64
 import os
+
 app = Flask (__name__)
 
 # Ensure templates are auto-reloaded
@@ -97,9 +98,26 @@ def capabilities():
 	# User wants to delete a capability
 	if request.method == "POST":
 		# Get what capability the user wants to delete
-		cap = request.form.get('capability')
-		
-		return f"Deleted capability {cap}"
+		capability = request.form.get('capability')
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Check if any probe uses the capability
+		probe = c.execute("SELECT * FROM probe_capabilities WHERE capability_id = ?", (capability,)).fetchone()
+
+		# If any probe implements the capability, we cannot delete
+		if not probe is None:
+			flash("This capability is used by some probe and cannot be deleted")
+		else:
+			flash("This capability is not used by any probe and will be deleted")
+
+		conn.close()
+		return redirect(url_for('capabilities'))
 
 	if request.method == "GET":
 		# Open connection with database

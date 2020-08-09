@@ -51,7 +51,7 @@
 
 		{% if get_flashed_messages() %} 
 			<header> 
-				<div class="alert alert-danger border text-center" role="alert"> {{ get_flashed_messages() | join(" ") }}
+				<div class="alert alert-danger border text-center" role="alert" id="flash"> {{ get_flashed_messages() | join(" ") }}
                			</div> 
 			</header> 
 		{% endif %} 
