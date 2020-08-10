@@ -48,7 +48,8 @@ CREATE TABLE users (
 	last_name TEXT,
 	username TEXT NOT NULL,
 	hash TEXT NOT NULL,
-	admin INTEGER NOT NULL
+	admin INTEGER NOT NULL,
+	chgpwd INTEGER DEFAULT 1 NOT NULL
 );
 
 CREATE INDEX measurement ON measurements(measurement_type, probe_id, datetime);

@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Users
+{% endblock %}
+
+{% block script %}
+{% endblock %}
+
+{% block main %}
+    <div class="mx-auto pt-4" style="width: 65%">
+    <table class="table text-center">
+        <thead class="thead-light">
+            <tr>
+                <th>#</th>
+                <th>Username</th>
+                <th>First Name</th>
+		<th>Last Name</th>
+		<th>Administrator</th>
+                <th style="width: 2%"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>{{ user[0] }}</td>
+                    <td>{{ user[3] }}</td>
+                    <td>{{ user[1] }}</td>
+                    <td>{{ user[2] }}</td>
+                    {% if user[4] == 1 %}                    
+                        <td><i class="fas fa-check green-icon"></i></td>
+                    {% else %}
+                        <td><i class="fas fa-times red-icon"></i></td>
+                    {% endif %}
+                    {% if user[3] != session.username %}
+                        <td><button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#userdelModal" data-userid="{{ user[0] }}" data-username="{{ user[3] }}"><i class="fas fa-minus"></i></button></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="text-right">
+        <a class="btn btn-info" role="button" href="/adduser">Add user</a>
+    </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="userdelModal" tabindex="-1" aria-labelledby="userdelModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userdelModalLabel">Warning!</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    You're about to delete the user! Are you sure?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-info" id="confirm-del-user">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>          
+{% endblock %}

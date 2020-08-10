@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import os
+import secrets
 from functools import wraps
 
 app = Flask (__name__)
@@ -37,8 +38,26 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def chgpwd_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('chgpwd'):
+             return redirect(url_for('changepasswd'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin'):
+            flash("You are not an admin")
+            return redirect("/")
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route("/")
 @login_required
+@chgpwd_required
 def index():
 	# Open connection with database
 	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
@@ -81,6 +100,7 @@ def index():
 
 @app.route("/graphs")
 @login_required
+@chgpwd_required
 def graphs():
 
 	# Get probe ID from args of URL
@@ -108,6 +128,8 @@ def graphs():
 
 @app.route("/capabilities", methods=["GET", "POST"])
 @login_required
+@chgpwd_required
+@admin_required
 def capabilities():
 	# User wants to delete a capability
 	if request.method == "POST":
@@ -167,6 +189,8 @@ def capabilities():
 
 @app.route("/addcap", methods=["GET", "POST"])
 @login_required
+@chgpwd_required
+@admin_required
 def add_cap():
 
 	# User reaches via POST method
@@ -207,6 +231,132 @@ def add_cap():
 	else:
 		return render_template('addcap.html')
 
+@app.route("/users", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def users():
+	# User wants to delete a capability
+	if request.method == "POST":
+		# Get what capability the user wants to delete
+		userid = request.form.get('userid')
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Let's check if the user is not trying to delete himself
+		username = c.execute("SELECT username FROM users WHERE id = ?", (userid,)).fetchone()
+
+		# Check if the user exists
+		if username is None:
+			flash(f"There's no user with id {userid}")
+			conn.close()
+			return redirect(url_for('users'))
+		# The user cannot delete himself
+		elif username[0] == session['username']:
+			flash(f"User cannot delete himself")
+			conn.close()
+			return redirect(url_for('users'))
+		else:
+			# Let's delete the user
+			c.execute("DELETE FROM users WHERE id = ?", (userid,))
+
+			# Check if the user was deleted
+			if c.rowcount == 1:
+				flash("The user was deleted succesfully")
+			else:
+				flash("Something went wrong and the user was not deleted")
+
+			# Commit modifications
+			conn.commit()
+
+			# Close connection
+			conn.close()
+
+			# Return to users screen
+			return redirect(url_for('users'))
+
+	if request.method == "GET":
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Get capabilities
+		users = c.execute("SELECT id, first_name, last_name, username, admin FROM users").fetchall()
+
+		# Close connection to the database
+		conn.close()
+
+		return render_template('users.html', users = users)
+
+@app.route("/adduser", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def adduser():
+
+	# User reaches via POST method
+	if request.method == "POST":
+		# Ensure fields are not empty
+		if not request.form.get("username") or not request.form.get("firstname") or not request.form.get("lastname"):
+			flash("Fields must not be empty")
+			return render_template('adduser.html')
+
+		username = request.form.get("username")
+		firstname = request.form.get("firstname")
+		lastname = request.form.get("lastname")
+		if request.form.get("admin"):
+			admin = 1
+		else:
+			admin = 0
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Check if username exist
+		capability = c.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+		if not capability is None:
+			flash("Username already taken")
+			conn.close()
+			return render_template('adduser.html')
+
+		# Generate random password
+		passwd = secrets.token_urlsafe(16)
+
+		# Insert capability into database
+		c.execute("INSERT INTO users (username, first_name, last_name, hash, admin) VALUES (?, ?, ?, ?, ?)", 
+				(username, firstname, lastname, generate_password_hash(passwd), admin))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to the database
+		conn.close()
+
+		# Check if user was correctly created
+		if c.rowcount == 1:
+			flash(f"New user created. Password {passwd}")
+		else:
+			flash("Error - User was not created")
+
+		# Get back to capabilities
+		return redirect("/users")
+
+	else:
+		return render_template('adduser.html')
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
 	"""Log user in"""
@@ -235,7 +385,7 @@ def login():
 		c = conn.cursor()
 
 		# Query database for username
-		rows = c.execute("SELECT id, username, hash, admin FROM users WHERE username = ?", (request.form.get("username"),)).fetchone()
+		rows = c.execute("SELECT id, username, hash, admin, chgpwd FROM users WHERE username = ?", (request.form.get("username"),)).fetchone()
 
 		# Close database connection
 		conn.close()
@@ -249,6 +399,7 @@ def login():
 		session["user_id"] = rows[0]
 		session["username"] = rows[1]
 		session["admin"] = rows[3]
+		session["chgpwd"] = rows[4]
 
 		# Redirect user to home page
 		return redirect("/")
@@ -288,6 +439,9 @@ def changepasswd():
 		elif request.form.get("newpasswd") != request.form.get("confirm"):
 			flash("Passwords must match")
 			return redirect(url_for('changepasswd'))
+		elif request.form.get("oldpasswd") == request.form.get('newpasswd'):
+			flash("New password must be different from old password")
+			return redirect(url_for('changepasswd'))
 
 		# Open connection with database
 		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
@@ -306,7 +460,7 @@ def changepasswd():
 			return redirect(url_for('changepasswd'))
 		# Change passwd
 		else:
-			c.execute("UPDATE users SET hash = ? WHERE id = ?", (generate_password_hash(request.form.get("newpasswd")), session["user_id"]))
+			c.execute("UPDATE users SET hash = ?, chgpwd = 0 WHERE id = ?", (generate_password_hash(request.form.get("newpasswd")), session["user_id"]))
 
 		# Commit modifications
 		conn.commit()
@@ -316,11 +470,12 @@ def changepasswd():
 
 		# Verifies if password updated succesfully
 		if c.rowcount == 1:
+			session['chgpwd'] = False
 			flash("Password changed succesfully")
-			return redirect("/")
 		else:
 			Flash("Error - password not changed")
-			return redirect("/")
+
+		return redirect("/")
 
 	# User reaches via GET
 	else:
