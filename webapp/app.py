@@ -80,6 +80,7 @@ def index():
 	return render_template("index.html", cards = cards)
 
 @app.route("/graphs")
+@login_required
 def graphs():
 
 	# Get probe ID from args of URL
@@ -106,6 +107,7 @@ def graphs():
 
 
 @app.route("/capabilities", methods=["GET", "POST"])
+@login_required
 def capabilities():
 	# User wants to delete a capability
 	if request.method == "POST":
@@ -164,6 +166,7 @@ def capabilities():
 
 
 @app.route("/addcap", methods=["GET", "POST"])
+@login_required
 def add_cap():
 
 	# User reaches via POST method
@@ -236,7 +239,7 @@ def login():
 
 		# Close database connection
 		conn.close()
-		app.logger.info(rows)
+
 		# Ensure username exists and password is correct
 		if rows is None or not check_password_hash(rows[2], request.form.get("password")):
 			flash("Invalid username and/or password")
@@ -264,6 +267,64 @@ def logout():
 
 	# Redirect user to login form
 	return redirect("/")
+
+@app.route("/changepasswd", methods=["GET", "POST"])
+@login_required
+def changepasswd():
+
+	# User reaches via POST
+	if request.method == "POST":
+
+		# Checks if all fiels where filled and if passwords match
+		if not request.form.get("oldpasswd"):
+			flash("Must provide old password")
+			return redirect(url_for('changepasswd'))
+		elif not request.form.get("newpasswd"):
+			flash("Must provide new password")
+			return redirect(url_for('changepasswd'))
+		elif not request.form.get("confirm"):
+			flash("Must confirm new password")
+			return redirect(url_for('changepasswd'))
+		elif request.form.get("newpasswd") != request.form.get("confirm"):
+			flash("Passwords must match")
+			return redirect(url_for('changepasswd'))
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Select user from database
+		rows = c.execute("SELECT id, username, hash FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+
+		# Check if old passwd match
+		if rows is None or not check_password_hash(rows[2], request.form.get("oldpasswd")):
+			flash("invalid password")
+			conn.close()
+			return redirect(url_for('changepasswd'))
+		# Change passwd
+		else:
+			c.execute("UPDATE users SET hash = ? WHERE id = ?", (generate_password_hash(request.form.get("newpasswd")), session["user_id"]))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to database
+		conn.close()
+
+		# Verifies if password updated succesfully
+		if c.rowcount == 1:
+			flash("Password changed succesfully")
+			return redirect("/")
+		else:
+			Flash("Error - password not changed")
+			return redirect("/")
+
+	# User reaches via GET
+	else:
+		return render_template("changepasswd.html")
 
 
 if __name__ == '__main__': app.run(debug=True, port = 80, host = '0.0.0.0')
