@@ -18,6 +18,7 @@
 		<th>Last Name</th>
 		<th>Administrator</th>
                 <th style="width: 2%"></th>
+                <th style="width: 2%"></th>
             </tr>
         </thead>
         <tbody>
@@ -28,18 +29,23 @@
                     <td>{{ user[1] }}</td>
                     <td>{{ user[2] }}</td>
                     {% if user[4] == 1 %}                    
-                        <td><i class="fas fa-check green-icon"></i></td>
+                        <td><img class="img-fluid" src="/static/icons/correct.png"></td>
                     {% else %}
-                        <td><i class="fas fa-times red-icon"></i></td>
+			<td></td>
+                        <!--<td><img class="img-fluid" src="/static/icons/close.png"</i></td>-->
                     {% endif %}
-                    {% if user[3] != session.username %}
+                        <form action="/edituser">
+                            <input type="hidden" name="userid" value="{{ user[0] }}"/>
+                            <td><button type="submit" class="btn btn-sm btn-info"><i class="fa fa-edit"></i></button></td>
+                        </form>
+                    {% if user[0] != session.user_id %}
                         <td><button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#userdelModal" data-userid="{{ user[0] }}" data-username="{{ user[3] }}"><i class="fas fa-minus"></i></button></td>
                     {% endif %}
                 </tr>
             {% endfor %}
         </tbody>
     </table>
-    <div class="text-right">
+    <div class="text-center">
         <a class="btn btn-info" role="button" href="/adduser">Add user</a>
     </div>
     </div>

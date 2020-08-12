@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, session
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 import sqlite3
 import datetime
 import matplotlib.pyplot as plt
@@ -21,6 +22,14 @@ if not SECRET_KEY:
 else:
     app.secret_key = SECRET_KEY
 
+# Folder that will store the app icons
+ICON_FOLDER = "static/icons"
+app.config["ICON_FOLDER"] = ICON_FOLDER
+ALLOWED_EXTENSIONS = {'png'}
+
+# Uploaded files cannot be larger than 1MB
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
+
 # Ensure responses aren't cached
 @app.after_request
 def after_request(response):
@@ -28,6 +37,12 @@ def after_request(response):
     response.headers["Expires"] = 0
     response.headers["Pragma"] = "no-cache"
     return response
+
+# Code to upload files from:
+# https://flask.palletsprojects.com/en/1.1.x/patterns/fileuploads/
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # From: https://flask.palletsprojects.com/en/1.1.x/patterns/viewdecorators/
 def login_required(f):
@@ -78,7 +93,7 @@ def index():
 		capabilities = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (str(probe[0]),)).fetchall()
 		lastdata = []
 		for capability in capabilities:
-			lastdata.append(c.execute("SELECT capability.description, measure.value, capability.unit, measure.datetime \
+			lastdata.append(c.execute("SELECT capability.description, measure.value, capability.unit, measure.datetime, capability.icon \
 						FROM measurements AS measure JOIN capabilities AS capability ON measure.measurement_type = capability.id \
 						WHERE measure.probe_id = ? and capability.id = ? \
 						ORDER BY measure.id DESC LIMIT 1", (str(probe[0]),str(capability[0]))).fetchone())
@@ -179,7 +194,7 @@ def capabilities():
 		c = conn.cursor()
 
 		# Get capabilities
-		capabilities = c.execute("SELECT id, description, unit FROM capabilities").fetchall()
+		capabilities = c.execute("SELECT id, description, unit, icon FROM capabilities").fetchall()
 
 		# Close connection to the database
 		conn.close()
@@ -200,6 +215,25 @@ def add_cap():
 			flash("Fields must not be empty")
 			return render_template('addcap.html')
 
+		# Check if user provided an icon file
+		if 'icon' not in request.files:
+			flash('Icon file must be provided')
+			return render_template('addcap.html')
+
+		icon = request.files['icon']
+
+		if icon.filename == '':
+			flash('No icon file selected')
+			return render_template('addcap.html')
+
+		if not icon or not allowed_file(icon.filename):
+			flash("Invalid file")
+			return render_template('addcap.html')
+
+		filename = secure_filename(icon.filename)
+		icon.save(os.path.join(app.root_path, app.config['ICON_FOLDER'], filename))
+
+		filepath = os.path.join("/", app.config['ICON_FOLDER'], filename)
 		newcap = request.form.get("capability")
 		unit = request.form.get("unit")
 
@@ -217,7 +251,7 @@ def add_cap():
 			return render_template('addcap.html')
 
 		# Insert capability into database
-		c.execute("INSERT INTO capabilities (description, unit) VALUES (?, ?)", (newcap,unit))
+		c.execute("INSERT INTO capabilities (description, unit, icon) VALUES (?, ?, ?)", (newcap, unit, filepath))
 
 		# Commit modifications
 		conn.commit()
@@ -356,6 +390,117 @@ def adduser():
 	else:
 		return render_template('adduser.html')
 
+@app.route("/edituser", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def edituser():
+	# User reaches via POST method
+	if request.method == "POST":
+
+		# Ensure fields are not empty
+		if not request.form.get("firstname") or not request.form.get("lastname"):
+			flash("Fields must not be empty")
+			return render_template('adduser.html')
+
+		userid = request.form.get("userid")
+		firstname = request.form.get("firstname")
+		lastname = request.form.get("lastname")
+
+		# User is admin?
+		if request.form.get("admin"):
+			admin = 1
+		else:
+			admin = 0
+
+		# Does user have to change the password on next login?
+		if request.form.get("chgpwd"):
+			chgpwd = 1
+		else:
+			chgpwd = 0
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Insert capability into database
+		c.execute("UPDATE users SET first_name = ?, last_name = ?, admin = ?, chgpwd = ? WHERE id = ?", 
+				(firstname, lastname, admin, chgpwd, userid))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to the database
+		conn.close()
+
+		# Check if user was correctly created
+		if c.rowcount == 1:
+			flash("User information updated")
+		else:
+			flash("Error - User information was not updated")
+
+		# Get back to capabilities
+		return redirect("/users")
+
+	else:
+		# Get user id from args
+		userid = request.args.get('userid')
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Get user information
+		user = c.execute("SELECT first_name, last_name, username, admin, chgpwd FROM users WHERE id = ?", (userid,)).fetchone()
+
+		# Close database connection
+		conn.close()
+
+		# Check if user is administrator to pass this information to form
+		if user[3] == 1:
+			admin = "administrator"
+		else:
+			admin = ""
+
+		# Check if user has to change password on next login
+		if user[4] == 1:
+			chgpwd = "chgpwd"
+		else:
+			chgpwd = ""
+
+		return render_template('edituser.html', userid = userid, firstname = user[0], lastname = user[1], 
+					username = user[2], admin = admin, chgpwd = chgpwd)
+
+@app.route("/events", methods=["GET"])
+@login_required
+@chgpwd_required
+def events():
+
+	# Open connection with database
+	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+	# Enable foreign keys on sqlite3
+	conn.execute("PRAGMA foreign_keys = ON")
+	c = conn.cursor()
+
+	# Query database for all events
+	events = c.execute("SELECT ev.id, et.description, pb.description, ev.log, ev.datetime\
+				FROM events AS ev JOIN event_types AS et ON ev.event_type_id = et.id\
+				JOIN probes AS pb ON ev.probe_id = pb.id").fetchall()
+
+	# Transform tuples in lists
+	events = [list(event) for event in events]
+
+	# Close database connection
+	conn.close()
+
+	return render_template('events.html', events = events)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
