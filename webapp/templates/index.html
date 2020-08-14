@@ -16,7 +16,9 @@
               {% for data in card[2] %}
                 <p class="card-text"><img src="{{ data[4] }}"> {{ data[1] }}{{ data[2] }} - {{ data[3] }}</p>
               {% endfor %}
-              <a href="/graphs?probe={{ card[0] }}" class="btn btn-info">Graphs</a>
+              <div class="text-right">
+                <a href="/graphs?probe={{ card[0] }}" class="btn btn-info">Graphs</a>
+              </div>
             </div>
           </div>
         </td>

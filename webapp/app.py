@@ -477,6 +477,42 @@ def edituser():
 		return render_template('edituser.html', userid = userid, firstname = user[0], lastname = user[1], 
 					username = user[2], admin = admin, chgpwd = chgpwd)
 
+@app.route("/probes", methods=["GET"])
+@login_required
+@chgpwd_required
+@admin_required
+def probes():
+	# Open connection with database
+	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+	# Enable foreign keys on sqlite3
+	conn.execute("PRAGMA foreign_keys = ON")
+	c = conn.cursor()
+
+	# Get all probes from database
+	probes = c.execute("SELECT id, description FROM probes").fetchall()
+
+	# List with all probes
+	probelist=[]
+
+	# Get capabilities for each probe
+	for probe in probes:
+		capabilities = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (probe[0],)).fetchall()
+
+		# List of icons
+		icons = []
+		# Get icon from each capability
+		for capability in capabilities:
+			icon = c.execute("SELECT icon FROM capabilities WHERE id = ?", (capability[0],)).fetchone()
+			icons.append(icon[0])
+
+		probelist.append([ probe[0], probe[1], icons])
+
+	# Close connection
+	conn.close()
+
+	return render_template("probes.html", probes = probelist)
+
 @app.route("/events", methods=["GET"])
 @login_required
 @chgpwd_required
@@ -627,5 +663,8 @@ def changepasswd():
 		return render_template("changepasswd.html")
 
 
-if __name__ == '__main__': app.run(debug=True, port = 80, host = '0.0.0.0')
+if __name__ == '__main__': 
 
+	app.run(debug=True, host = '0.0.0.0', port = 80)
+#	app.run(debug=True, host = '0.0.0.0', port = 443, ssl_context=('/home/pi/projects/weather/webapp/cert.pem',
+#									'/home/pi/projects/weather/webapp/key.pem'))

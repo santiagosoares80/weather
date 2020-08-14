@@ -32,14 +32,13 @@
                         <td><img class="img-fluid" src="/static/icons/correct.png"></td>
                     {% else %}
 			<td></td>
-                        <!--<td><img class="img-fluid" src="/static/icons/close.png"</i></td>-->
                     {% endif %}
                         <form action="/edituser">
                             <input type="hidden" name="userid" value="{{ user[0] }}"/>
-                            <td><button type="submit" class="btn btn-sm btn-info"><i class="fa fa-edit"></i></button></td>
+                            <td><button type="submit" class="btn btn-sm btn-outline-light"><img src="/static/icons/pencil.png"></button></td>
                         </form>
                     {% if user[0] != session.user_id %}
-                        <td><button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#userdelModal" data-userid="{{ user[0] }}" data-username="{{ user[3] }}"><i class="fas fa-minus"></i></button></td>
+                        <td><button type="button" class="btn btn-sm btn-outline-light" data-toggle="modal" data-target="#userdelModal" data-userid="{{ user[0] }}" data-username="{{ user[3] }}"><img src="/static/icons/close.png"></button></td>
                     {% endif %}
                 </tr>
             {% endfor %}

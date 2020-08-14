@@ -26,12 +26,12 @@
                     <td>{{ capability[1] }}</td>
                     <td>{{ capability[2] }}</td>
                     <td><img src="{{ capability[3] }}"></td>
-                    <td><button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#capdelModal" data-cap="{{ capability[0] }}"><i class="fas fa-minus"></i></button></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-light" data-toggle="modal" data-target="#capdelModal" data-cap="{{ capability[0] }}"><img src="/static/icons/close.png"></button></td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
-    <div class="text-right">
+    <div class="text-center">
         <a class="btn btn-info" role="button" href="/addcap">Add capability</a>
     </div>
     </div>

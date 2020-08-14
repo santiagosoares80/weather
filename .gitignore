@@ -2,3 +2,5 @@ __pycache__/*
 weather.db
 webapp/static/images/*
 webapp/static/icons/
+webapp/cert.pem
+webapp/key.pem
