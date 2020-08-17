@@ -1,6 +1,7 @@
 CREATE TABLE probes (
 	id INTEGER NOT NULL PRIMARY KEY,
-	description TEXT NOT NULL
+	description TEXT NOT NULL,
+	prbimg TEXT
 );
 
 CREATE TABLE capabilities (

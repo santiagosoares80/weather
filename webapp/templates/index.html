@@ -5,24 +5,28 @@
 {% endblock %}
 
 {% block main %}
-  <table>
-    <tr>
-      {% for card in cards %}
-        <td>  
-          <div class="card" style="width: 18rem;">
-            <img src="/static/images/arduino.jpg" class="card-img-top" alt="Arduino">
+  <div class="card-deck">
+      {% for card in cards %}  
+          <div class="card" style="max-width: 18rem;">
+            <img src="{{ card [3] }}" class="card-img-top" alt="Arduino">
             <div class="card-body">
               <h5 class="card-title">{{ card[1] }}</h5>
               {% for data in card[2] %}
                 <p class="card-text"><img src="{{ data[4] }}"> {{ data[1] }}{{ data[2] }} - {{ data[3] }}</p>
               {% endfor %}
-              <div class="text-right">
-                <a href="/graphs?probe={{ card[0] }}" class="btn btn-info">Graphs</a>
-              </div>
+            </div>
+            <div class="card-footer text-right">
+              <a href="/graphs?probe={{ card[0] }}" class="btn btn-info">Graphs</a>
             </div>
           </div>
-        </td>
       {% endfor %}
-    </tr>
-  </table>
+    </div>
+
+  <div class="pt-4"><h5>Legend:</h5></div>
+  <table>
+    {% for capability in capabilities %}
+        <td><img src="{{ capability[1] }}">:</td>
+        <td class="pr-4">{{ capability[0] }}</td>
+    {% endfor %}
+    </table>
 {% endblock %}

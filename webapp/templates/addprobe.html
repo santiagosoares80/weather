@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Add probe
+{% endblock %}
+
+{% block main %}  
+    <div class="row justify-content-center pt-4">
+        <div class="col-5">
+            <form action="/addprobe" id="addprobe" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="description">Probe description:</label>
+                    <input autocomplete="off" autofocus class="form-control" name="description" id="description" placeholder="Description" type="text" aria-describedby="descriptionHelp">
+                    <small id="descriptionHelp" class="form-text text-muted">A description of the probe you're creating.</small>
+                </div> 
+                <h6>Choose the capabilities your probe implements</h6> 
+                {% for capability in capabilities %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="{{ capability[0] }}" id="{{ capability[0] }}" name="cap{{ capability[0] }}">
+                        <label class="form-check-label" for="{{ capability[0] }}">
+                            {{ capability[1] }}
+                            <img src="{{ capability[2] }}">
+                        </label>
+                    </div>
+                {% endfor %}
+		<div class="custom-file">
+		    <input type="file" class="custom-file-input" name="prbimg" id="prbimg" aria-describedby="prbimgHelp">
+		    <label class="custom-file-label" for="prbimg">Choose probe image</label>
+                    <small id="prbimgHelp" class="form-text text-muted">Must be a PNG image file.</small>                 		    
+		</div>
+            </form> 
+            <form action="/probes" id="cancel"/>
+                <div class="text-center pt-4">
+                    <button class="btn btn-danger" type="submit" form="cancel">Cancel</button>
+                    <button class="btn btn-info" type="submit" form="addprobe">Add</button>
+                </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="/static/addprobe.js"></script>
+{% endblock %}

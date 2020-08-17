@@ -24,7 +24,9 @@ else:
 
 # Folder that will store the app icons
 ICON_FOLDER = "static/icons"
+PRBIMG_FOLDER = "static/images"
 app.config["ICON_FOLDER"] = ICON_FOLDER
+app.config["PRBIMG_FOLDER"] = PRBIMG_FOLDER
 ALLOWED_EXTENSIONS = {'png'}
 
 # Uploaded files cannot be larger than 1MB
@@ -82,7 +84,7 @@ def index():
 	c = conn.cursor()
 
 	# Get probes
-	probes = c.execute("SELECT * FROM probes").fetchall()
+	probes = c.execute("SELECT id, description, prbimg FROM probes").fetchall()
 
 	# List of data measured
 	cards = []
@@ -93,25 +95,38 @@ def index():
 		capabilities = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (str(probe[0]),)).fetchall()
 		lastdata = []
 		for capability in capabilities:
-			lastdata.append(c.execute("SELECT capability.description, measure.value, capability.unit, measure.datetime, capability.icon \
+			row = c.execute("SELECT capability.description, measure.value, capability.unit, measure.datetime, capability.icon \
 						FROM measurements AS measure JOIN capabilities AS capability ON measure.measurement_type = capability.id \
 						WHERE measure.probe_id = ? and capability.id = ? \
-						ORDER BY measure.id DESC LIMIT 1", (str(probe[0]),str(capability[0]))).fetchone())
+						ORDER BY measure.id DESC LIMIT 1", (str(probe[0]),str(capability[0]))).fetchone()
+
+			# Check if row is not empty
+			if row is not None:
+				lastdata.append(row)
+			else:
+				row = c.execute("SELECT description, icon FROM capabilities WHERE id = ?", (str(capability[0]),)).fetchone()
+				lastdata.append((row[0], '', '', '', row[1]))
+
 		# Convert tuples to lists
 		lastdata = [list(data) for data in lastdata]
 
 		# Remove '\x00' from end of values and format time of last measurement
 		for data in lastdata:
-			data[1] = data[1].replace('\x00','')
-			data[3] = datetime.datetime.strptime(data[3], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+			if data[1] and data[3]:
+				if type(data[1]) == str:
+					data[1] = data[1].replace('\x00','')
+				data[3] = datetime.datetime.strptime(data[3], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
 
 		# Insert each probe with the last measurements to the cards list
-		cards.append([ probe[0], probe[1], lastdata])
+		cards.append([ probe[0], probe[1], lastdata, probe[2]])
+
+	# Get all capabilities
+	allcaps = c.execute("SELECT description, icon FROM capabilities").fetchall()
 
 	# Close connection to the database
 	conn.close()
 
-	return render_template("index.html", cards = cards)
+	return render_template("index.html", cards = cards, capabilities = allcaps)
 
 @app.route("/graphs")
 @login_required
@@ -270,7 +285,7 @@ def add_cap():
 @chgpwd_required
 @admin_required
 def users():
-	# User wants to delete a capability
+	# User wants to delete a user
 	if request.method == "POST":
 		# Get what capability the user wants to delete
 		userid = request.form.get('userid')
@@ -341,7 +356,7 @@ def adduser():
 		# Ensure fields are not empty
 		if not request.form.get("username") or not request.form.get("firstname") or not request.form.get("lastname"):
 			flash("Fields must not be empty")
-			return render_template('adduser.html')
+			return render_template("adduser.html")
 
 		username = request.form.get("username")
 		firstname = request.form.get("firstname")
@@ -401,7 +416,7 @@ def edituser():
 		# Ensure fields are not empty
 		if not request.form.get("firstname") or not request.form.get("lastname"):
 			flash("Fields must not be empty")
-			return render_template('adduser.html')
+			return redirect(url_for("users"))
 
 		userid = request.form.get("userid")
 		firstname = request.form.get("firstname")
@@ -477,41 +492,186 @@ def edituser():
 		return render_template('edituser.html', userid = userid, firstname = user[0], lastname = user[1], 
 					username = user[2], admin = admin, chgpwd = chgpwd)
 
-@app.route("/probes", methods=["GET"])
+@app.route("/probes", methods=["GET", "POST"])
 @login_required
 @chgpwd_required
 @admin_required
 def probes():
-	# Open connection with database
-	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
 
-	# Enable foreign keys on sqlite3
-	conn.execute("PRAGMA foreign_keys = ON")
-	c = conn.cursor()
+	# User wants to delete a probe
+	if request.method == "POST":
 
-	# Get all probes from database
-	probes = c.execute("SELECT id, description FROM probes").fetchall()
+		# Get what probe the user wants to delete
+		probeid = request.form.get('probe')
 
-	# List with all probes
-	probelist=[]
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
 
-	# Get capabilities for each probe
-	for probe in probes:
-		capabilities = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (probe[0],)).fetchall()
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
 
-		# List of icons
-		icons = []
-		# Get icon from each capability
+		# Delete all measurements of the probe
+		c.execute("DELETE FROM measurements WHERE probe_id = ?", (probeid,))
+		conn.commit()
+
+		# Delete all associations between this probe and any capability
+		c.execute("DELETE FROM probe_capabilities WHERE probe_id = ?", (probeid,))
+		conn.commit()
+
+		# Delete the probe itself
+		c.execute("DELETE FROM probes WHERE id = ?", (probeid,))
+		conn.commit()
+
+		# Check if the probe was deleted. Foreign keys assure that measurements and probe_capabilities were also deleted
+		if c.rowcount == 1:
+			flash("The probe was deleted succesfully")
+		else:
+			flash("Something went wrong and the probe was not deleted")
+
+		# Close connection
+		conn.close()
+
+		# Return to capabilities screen
+		return redirect(url_for('probes'))
+
+	else:
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Get all probes from database
+		probes = c.execute("SELECT id, description FROM probes").fetchall()
+
+		# List with all probes
+		probelist=[]
+
+		# Get capabilities for each probe
+		for probe in probes:
+			capabilities = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (probe[0],)).fetchall()
+
+			# List of icons
+			icons = []
+			# Get icon from each capability
+			for capability in capabilities:
+				icon = c.execute("SELECT icon FROM capabilities WHERE id = ?", (capability[0],)).fetchone()
+				icons.append(icon[0])
+
+			probelist.append([ probe[0], probe[1], icons])
+
+		# Get all capabilities
+		allcaps = c.execute("SELECT description, icon FROM capabilities").fetchall()
+
+		# Close connection
+		conn.close()
+
+		return render_template("probes.html", probes = probelist, capabilities = allcaps)
+
+@app.route("/addprobe", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def addprobe():
+
+	if request.method == 'POST':
+
+		# Check if user has provided a description for the capability
+		if not request.form.get("description"):
+			flash("Must provide a description for the capability")
+			return redirect(url_for("addprobe"))
+
+		# Check if user provided an image file
+		if 'prbimg' not in request.files:
+			flash('An image file must be provided')
+			return redirect(url_for('addprobe'))
+
+		prbimg = request.files['prbimg']
+
+		if prbimg.filename == '':
+			flash('No image file selected')
+			return redirect(url_for('addprobe'))
+
+		if not prbimg or not allowed_file(prbimg.filename):
+			flash("Invalid file")
+			return redirect(url_for('addprobe'))
+
+		filename = secure_filename(prbimg.filename)
+		prbimg.save(os.path.join(app.root_path, app.config['PRBIMG_FOLDER'], filename))
+
+		filepath = os.path.join("/", app.config['PRBIMG_FOLDER'], filename)
+		newprobe = request.form.get("description")
+
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Check if probe exist
+		probe = c.execute("SELECT id FROM probes WHERE description = ?", (newprobe,)).fetchone()
+		if not probe is None:
+			flash("Probe already exist")
+			conn.close()
+			return redirect(url_for('addprobe'))
+
+		# Get capabilities the user added to the probe
+		capabilities = c.execute("SELECT id FROM capabilities").fetchall()
+
+		probecap = []
 		for capability in capabilities:
-			icon = c.execute("SELECT icon FROM capabilities WHERE id = ?", (capability[0],)).fetchone()
-			icons.append(icon[0])
+			if request.form.get(f"cap{capability[0]}"):
+				probecap.append(capability[0])
 
-		probelist.append([ probe[0], probe[1], icons])
+		# Insert probe into database
+		c.execute("INSERT INTO probes (description, prbimg) VALUES (?, ?)", (newprobe, filepath))
+		conn.commit()
 
-	# Close connection
-	conn.close()
+		# If the probe was inserted successfully, insert capabilities for the probe
+		if c.rowcount < 1:
+			flash(f"Error - Probe {newprobe} not inserted successfully")
+			conn.close()
+			return redirect(url_for('addprobe'))
+		else:
+			flash(f"Probe {newprobe} inserted successfully")
 
-	return render_template("probes.html", probes = probelist)
+			# Get id of the probe created
+			newprobeid = c.execute("SELECT id FROM probes WHERE description = ?", (newprobe,)).fetchone()
+
+			# Associate capabilities to the probe
+			for cap in probecap:
+				c.execute("INSERT INTO probe_capabilities (probe_id, capability_id) VALUES (?, ?)",
+					(newprobeid[0], cap))
+				conn.commit()
+				if c.rowcount < 1:
+					flash(f"Error - Capability {cap} not associated with probe {newprobe}")
+				else:
+					flash(f"Capability {cap} succesfully associated with probe {newprobe}")
+
+		# Close connection to the database
+		conn.close()
+
+		# Get back to probes
+		return redirect("/probes")
+
+	else:
+		# Open connection with database
+		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
+
+		# Enable foreign keys on sqlite3
+		conn.execute("PRAGMA foreign_keys = ON")
+		c = conn.cursor()
+
+		# Get capabilities
+		capabilities = c.execute("SELECT id, description, icon FROM capabilities").fetchall()
+
+		# Close database connection
+		conn.close()
+
+		return render_template("addprobe.html", capabilities = capabilities)
 
 @app.route("/events", methods=["GET"])
 @login_required
@@ -665,6 +825,6 @@ def changepasswd():
 
 if __name__ == '__main__': 
 
-	app.run(debug=True, host = '0.0.0.0', port = 80)
-#	app.run(debug=True, host = '0.0.0.0', port = 443, ssl_context=('/home/pi/projects/weather/webapp/cert.pem',
-#									'/home/pi/projects/weather/webapp/key.pem'))
+#	app.run(debug=True, host = '0.0.0.0', port = 80)
+	app.run(debug=True, host = '0.0.0.0', port = 443, ssl_context=('/home/pi/projects/weather/webapp/cert.pem',
+									'/home/pi/projects/weather/webapp/key.pem'))

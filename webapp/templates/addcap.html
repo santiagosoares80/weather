@@ -19,8 +19,8 @@
                     <!--<small id="unitHelp" class="form-text text-muted">The symbol of the unit of measurement of your capability.(e.g.: m for meters.</small>-->                 
                 </div>
 		<div class="custom-file">
-		    <label class="custom-file-label" for="icon">Choose icon file</label>
 		    <input type="file" class="custom-file-input" name="icon" id="icon" aria-describedby="iconHelp">
+		    <label class="custom-file-label" for="icon">Choose icon file</label>
                     <small id="iconHelp" class="form-text text-muted">The icon must be a 32px png file.</small>                 		    
 		</div>
             </form> 
@@ -31,4 +31,8 @@
                 </div>
         </div>
     </div>
+{% endblock %}
+
+{% block script %}
+    <script src="/static/addcap.js"></script>
 {% endblock %}

@@ -4,9 +4,6 @@
     Probes
 {% endblock %}
 
-{% block script %}
-{% endblock %}
-
 {% block main %}
     <div class="mx-auto pt-4" style="width: 65%">
     <table class="table text-center">
@@ -41,7 +38,15 @@
     <div class="text-center">
         <a class="btn btn-info" role="button" href="/addprobe">Add probe</a>
     </div>
+    <div class="pt-4"><h5>Legend:</h5></div>
+    <table>
+    {% for capability in capabilities %}
+        <td><img src="{{ capability[1] }}">:</td>
+        <td class="pr-4">{{ capability[0] }}</td>
+    {% endfor %}
+    </table>
     </div>
+
     <!-- Modal -->
     <div class="modal fade" id="probedelModal" tabindex="-1" aria-labelledby="probedelModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -62,4 +67,8 @@
             </div>
         </div>
     </div>          
+{% endblock %}
+
+{% block script %}
+    <script src="/static/probes.js"></script>
 {% endblock %}
