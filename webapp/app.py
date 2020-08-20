@@ -72,15 +72,19 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Function to connect to the database
+DATABASE_PATH = "/home/pi/projects/weather/weather.db"
+def db_connect(db_path = DATABASE_PATH):
+	connection = sqlite3.connect(db_path)
+	connection.execute("PRAGMA foreign_keys = ON")
+	return connection
+
 @app.route("/")
 @login_required
 @chgpwd_required
 def index():
 	# Open connection with database
-	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-	# Enable foreign keys on sqlite3
-	conn.execute("PRAGMA foreign_keys = ON")
+	conn = db_connect()
 	c = conn.cursor()
 
 	# Get probes
@@ -137,10 +141,7 @@ def graphs():
 	probe = request.args.get('probe')
 
 	# Open connection with database
-	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-	# Enable foreign keys on sqlite3
-	conn.execute("PRAGMA foreign_keys = ON")
+	conn = db_connect()
 	c = conn.cursor()
 
 	# Get probe capabilities
@@ -167,10 +168,7 @@ def capabilities():
 		capability = request.form.get('capability')
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Check if any probe uses the capability
@@ -201,11 +199,9 @@ def capabilities():
 			return redirect(url_for('capabilities'))
 
 	if request.method == "GET":
-		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
 
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		# Open connection with database
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Get capabilities
@@ -253,10 +249,7 @@ def add_cap():
 		unit = request.form.get("unit")
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Check if capability exist
@@ -291,10 +284,7 @@ def users():
 		userid = request.form.get('userid')
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Let's check if the user is not trying to delete himself
@@ -330,11 +320,9 @@ def users():
 			return redirect(url_for('users'))
 
 	if request.method == "GET":
-		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
 
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		# Open connection with database
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Get capabilities
@@ -367,10 +355,7 @@ def adduser():
 			admin = 0
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Check if username exist
@@ -435,10 +420,7 @@ def edituser():
 			chgpwd = 0
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Insert capability into database
@@ -465,10 +447,7 @@ def edituser():
 		userid = request.args.get('userid')
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Get user information
@@ -505,10 +484,7 @@ def probes():
 		probeid = request.form.get('probe')
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Delete all measurements of the probe
@@ -537,10 +513,7 @@ def probes():
 
 	else:
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Get all probes from database
@@ -605,10 +578,7 @@ def addprobe():
 		newprobe = request.form.get("description")
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Check if probe exist
@@ -659,10 +629,7 @@ def addprobe():
 
 	else:
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Get capabilities
@@ -673,16 +640,114 @@ def addprobe():
 
 		return render_template("addprobe.html", capabilities = capabilities)
 
+@app.route("/editprobe", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def editprobe():
+
+	# User reaches via POST method
+	if request.method == "POST":
+
+		# Ensure fields are not empty
+		if not request.form.get("description"):
+			flash("Description must not be empty")
+			return redirect(url_for("probes"))
+
+		description = request.form.get("description")
+		probeid = request.form.get("probeid")
+
+		filepath = None
+		# Check if user provided an image file
+		if 'prbimg' in request.files:
+			prbimg = request.files['prbimg']
+			if not allowed_file(prbimg.filename):
+				flash("Invalid file")
+				return redirect(url_for('probes'))
+			filename = secure_filename(prbimg.filename)
+			prbimg.save(os.path.join(app.root_path, app.config['PRBIMG_FOLDER'], filename))
+
+			filepath = os.path.join("/", app.config['PRBIMG_FOLDER'], filename)
+
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Get capabilities the user added to the probe
+		capabilities = c.execute("SELECT id FROM capabilities").fetchall()
+
+		newprobecaps = []
+		for capability in capabilities:
+			if request.form.get(f"cap{capability[0]}"):
+				newprobecaps.append(capability[0])
+
+		# Select capabilities the probe already have
+		probecaps = c.execute("SELECT probe_id, capability_id FROM probe_capabilities WHERE probe_id = ?", (probeid,)).fetchall()
+		probecaps = [cap[0] for cap in probecaps]
+
+		# Check if new capabilities were added to the probe
+		for cap in newprobecaps:
+			if cap not in probecaps:
+				c.execute("INSERT INTO probe_capabilities (probe_id, capability_id) VALUES (?, ?)", (probeid, cap))
+				conn.commit()
+
+		# If user provided a new file
+		if filepath is not None:
+			# Update probe description and image
+			c.execute("UPDATE probes SET description = ?, prbimg = ? WHERE id = ?", (description, filepath, probeid))
+		else:
+			# Update only probe description
+			c.execute("UPDATE probes SET description = ? WHERE id = ?", (description, probeid))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to the database
+		conn.close()
+
+		# Check if user was correctly created
+		if c.rowcount == 1:
+			flash("Probe information updated")
+		else:
+			flash("Error - Probe information was not updated")
+
+		# Get back to capabilities
+		return redirect("/probes")
+
+	else:
+		# Get probe id from args
+		probeid = request.args.get('probeid')
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Get probe description
+		probe = c.execute("SELECT description FROM probes WHERE id = ?", (probeid,)).fetchone()
+
+		# Get probe capabilities
+		probecaps = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (probeid,)).fetchall()
+
+		# Transform probecaps in a list
+		probecaps = [probecap[0] for probecap in probecaps]
+
+		# Get all capabilities
+		capabilities = c.execute("SELECT id, description, icon FROM capabilities").fetchall()
+
+		# Close database connection
+		conn.close()
+
+		return render_template('editprobe.html', probeid = probeid, description = probe[0], 
+					probecaps = probecaps, capabilities = capabilities)
+
 @app.route("/events", methods=["GET"])
 @login_required
 @chgpwd_required
 def events():
 
 	# Open connection with database
-	conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-	# Enable foreign keys on sqlite3
-	conn.execute("PRAGMA foreign_keys = ON")
+	conn = db_connect()
 	c = conn.cursor()
 
 	# Query database for all events
@@ -719,10 +784,7 @@ def login():
 			return render_template('login.html')
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Query database for username
@@ -785,10 +847,7 @@ def changepasswd():
 			return redirect(url_for('changepasswd'))
 
 		# Open connection with database
-		conn = sqlite3.connect("/home/pi/projects/weather/weather.db")
-
-		# Enable foreign keys on sqlite3
-		conn.execute("PRAGMA foreign_keys = ON")
+		conn = db_connect()
 		c = conn.cursor()
 
 		# Select user from database
