@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Logs
+{% endblock %}
+
+{% block main %}
+    <div class="mx-auto pt-4" style="width: 80%">
+    <table class="table text-center">
+        <thead class="thead-light">
+            <tr>
+                <th>#</th>
+                <th>Event Type</th>
+                <th>Probe</th>
+		<th>Log</th>
+		<th>Datetime</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+                <tr>
+                    <td>{{ event[0] }}</td>
+                    <td>{{ event[1] }}</td>
+                    <td>{{ event[2] }}</td>
+                    <td>{{ event[3] }}</td>
+                    <td>{{ event[4] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>          
+{% endblock %}

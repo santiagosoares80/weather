@@ -741,10 +741,161 @@ def editprobe():
 		return render_template('editprobe.html', probeid = probeid, description = probe[0], 
 					probecaps = probecaps, capabilities = capabilities)
 
-@app.route("/events", methods=["GET"])
+@app.route("/events", methods=["GET", "POST"])
 @login_required
 @chgpwd_required
+@admin_required
 def events():
+	# User wants to delete a event
+	if request.method == "POST":
+		# Get what event the user wants to delete
+		event_type = request.form.get('eventtype')
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Check if there are any logs with this event type
+		logs = c.execute("SELECT * FROM events WHERE event_type_id = ?", (event_type,)).fetchone()
+
+		# If there are any logs with this event type, we cannot delete
+		if not logs is None:
+			flash("This event type is in use and cannot be deleted")
+			conn.close()
+			return redirect(url_for('events'))
+		else:
+			# There are no logs with this event type, let's delete it
+			c.execute("DELETE FROM event_types WHERE id = ?", (event_type,))
+
+			# Check if the event_type was deleted
+			if c.rowcount == 1:
+				flash("The event type was deleted succesfully")
+			else:
+				flash("Something went wrong and the event type was not deleted")
+
+			# Commit modifications
+			conn.commit()
+
+			# Close connection
+			conn.close()
+
+			# Return to events screen
+			return redirect(url_for('events'))
+
+	if request.method == "GET":
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Get event types
+		event_types = c.execute("SELECT id, description FROM event_types").fetchall()
+
+		# Close connection to the database
+		conn.close()
+
+		return render_template('events.html', event_types = event_types)
+
+@app.route("/addevent", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def addevent():
+
+	# User reaches via POST method
+	if request.method == "POST":
+		# Ensure fields are not empty
+		if not request.form.get("event"):
+			flash("Fields must not be empty")
+			return render_template('addevent.html')
+
+		newevent = request.form.get("event")
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Check if event type already exists
+		event = c.execute("SELECT id FROM event_types WHERE description = ?", (newevent,)).fetchone()
+		if not event is None:
+			flash("Event already exist")
+			return render_template('addevent.html')
+
+		# Insert event_type into database
+		c.execute("INSERT INTO event_types (description) VALUES (?)", (newevent,))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to the database
+		conn.close()
+
+		# Get back to capabilities
+		flash("Event successfully added")
+		return redirect("/events")
+
+	else:
+		return render_template('addevent.html')
+
+@app.route("/editevent", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+@admin_required
+def editevent():
+
+	# User reaches via POST method
+	if request.method == "POST":
+
+		# Ensure fields are not empty
+		if not request.form.get("event"):
+			flash("Event description must not be empty")
+			return redirect(url_for("events"))
+
+		event = request.form.get("event")
+		eventtypeid = request.form.get("eventtypeid")
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Update only event description
+		c.execute("UPDATE event_types SET description = ? WHERE id = ?", (event, eventtypeid))
+
+		# Commit modifications
+		conn.commit()
+
+		# Close connection to the database
+		conn.close()
+
+		# Check if event was correctly updated
+		if c.rowcount == 1:
+			flash("Event type information updated")
+		else:
+			flash("Error - Event type information was not updated")
+
+		# Get back to capabilities
+		return redirect("/events")
+
+	else:
+		# Get event type id from args
+		eventtypeid = request.args.get('eventtypeid')
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Get event description
+		event = c.execute("SELECT description FROM event_types WHERE id = ?", (eventtypeid,)).fetchone()
+
+		# Close database connection
+		conn.close()
+
+		return render_template('editevent.html', eventtypeid = eventtypeid, event = event[0])
+
+@app.route("/logs", methods=["GET"])
+@login_required
+@chgpwd_required
+def logs():
 
 	# Open connection with database
 	conn = db_connect()
@@ -753,7 +904,7 @@ def events():
 	# Query database for all events
 	events = c.execute("SELECT ev.id, et.description, pb.description, ev.log, ev.datetime\
 				FROM events AS ev JOIN event_types AS et ON ev.event_type_id = et.id\
-				JOIN probes AS pb ON ev.probe_id = pb.id").fetchall()
+				JOIN probes AS pb ON ev.probe_id = pb.id ORDER BY ev.datetime DESC").fetchall()
 
 	# Transform tuples in lists
 	events = [list(event) for event in events]
@@ -761,7 +912,7 @@ def events():
 	# Close database connection
 	conn.close()
 
-	return render_template('events.html', events = events)
+	return render_template('logs.html', events = events)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():

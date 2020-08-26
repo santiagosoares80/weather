@@ -1,6 +1,7 @@
 from pysnmp.hlapi import *
 from sys import exit
 from datetime import datetime
+import syslog
 import secret_keys
 import pickle
 import os
@@ -24,15 +25,15 @@ errorIndication, errorStatus, errorIndex, varBinds = next(
 )
 
 if errorIndication:
-    print(errorIndication)
+    syslog.syslog(errorIndication)
     exit()
 elif errorStatus:
-    print('%s at %s' % (errorStatus.prettyPrint(),
+    syslog.syslog('%s at %s' % (errorStatus.prettyPrint(),
                         errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
     exit()
 else:
-    inOctets = varBinds[0][1]
-    outOctets = varBinds[1][1]
+    inOctets = float(varBinds[0][1])
+    outOctets = float(varBinds[1][1])
 
 collectTime = datetime.now()
 
@@ -74,4 +75,4 @@ with open(FILE, 'wb') as f:
     pickle.dump(currentdata, f)
     f.truncate()
 
-
+syslog.syslog("Router Probe SNMP: Data collected allright")

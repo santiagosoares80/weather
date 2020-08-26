@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Add event type
+{% endblock %}
+
+{% block main %}  
+    <div class="row justify-content-center pt-4">
+        <div class="col-3">
+            <form action="/addevent" id="addevent" method="post">
+                <div class="form-group">
+                    <label for="event">Event description:</label>
+                    <input autocomplete="off" autofocus class="form-control" name="event" id="event" placeholder="Event" type="text" aria-describedby="eventHelp">
+                </div> 
+            </form> 
+            <form action="/events" id="cancel"/>
+                <div class="text-center pt-4">
+                    <button class="btn btn-danger" type="submit" form="cancel">Cancel</button>
+                    <button class="btn btn-info" type="submit" form="addevent">Add</button>
+                </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+{% endblock %}

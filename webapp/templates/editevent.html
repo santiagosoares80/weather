@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Edit event type
+{% endblock %}
+
+{% block main %}  
+    <div class="row justify-content-center pt-4">
+        <div class="col-5">
+            <form action="/editevent" id="editevent" method="post">
+		<input type="hidden" name="eventtypeid" id="eventtypeid"  value="{{ eventtypeid }}" readonly->
+                <div class="form-group">
+                    <label for="event">Event description:</label>
+                    <input autocomplete="off" autofocus class="form-control" name="event" id="event" type="text" value="{{ event }}">
+                </div> 
+            </form> 
+            <form action="/events" id="cancel"/>
+                <div class="text-center pt-4">
+                    <button class="btn btn-danger" type="submit" form="cancel">Cancel</button>
+                    <button class="btn btn-info" type="submit" form="editevent">Save</button>
+                </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+{% endblock %}
