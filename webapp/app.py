@@ -892,6 +892,37 @@ def editevent():
 
 		return render_template('editevent.html', eventtypeid = eventtypeid, event = event[0])
 
+@app.route("/customgraph", methods=["GET", "POST"])
+@login_required
+@chgpwd_required
+def custom():
+
+	# User reaches via POST method
+	if request.method == "POST":
+		return redirect("/")
+
+	else:
+		# Gets probe id
+		probeid = request.args.get("probeid")
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Get max and min dates
+		dates = c.execute("SELECT min(date(datetime)), max(date(datetime)) FROM measurements WHERE probe_id = ?", (probeid,)).fetchone()
+		mindate = dates[0]
+		maxdate = dates[1]
+
+		# Get capabilities of the probes
+		capabilities = c.execute("SELECT cp.id, cp.description, cp.icon FROM capabilities AS cp \
+						JOIN probe_capabilities AS pc on cp.id = pc.capability_id \
+						WHERE pc.probe_id = ?", (probeid,)).fetchall()
+		# Close database connection
+		conn.close()
+
+		return render_template('customgraph.html', probeid = probeid, mindate = mindate, maxdate = maxdate, capabilities = capabilities)
+
 @app.route("/logs", methods=["GET"])
 @login_required
 @chgpwd_required

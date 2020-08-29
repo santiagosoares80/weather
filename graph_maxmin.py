@@ -42,20 +42,15 @@ for probe in probes:
 
     # Select max and min daily values from each capability of each probe
     for capability in capabilities:
-        max = c.execute("SELECT MAX(value), date(datetime) FROM measurements \
-                         WHERE probe_id = ? AND measurement_type = ? \
-                         AND datetime > datetime('now', 'localtime', ?) \
-                         GROUP BY date(datetime)", (str(probe[0]), str(capability[0]), f"-{days} day")).fetchall()
-
-        min = c.execute("SELECT MIN(value), date(datetime) FROM measurements \
+        maxmin = c.execute("SELECT MAX(CAST(value AS INT)), MIN(CAST(value AS INT)), date(datetime) FROM measurements \
                          WHERE probe_id = ? AND measurement_type = ? \
                          AND datetime > datetime('now', 'localtime', ?) \
                          GROUP BY date(datetime)", (str(probe[0]), str(capability[0]), f"-{days} day")).fetchall()
 
         # Convert tuples to lists
-        max_values = [float(data[0].replace('\x00','')) if type(data[0]) == str else data[0] for data in max]
-        min_values = [float(data[0].replace('\x00','')) if type(data[0]) == str else data[0] for data in min]
-        dates = [datetime.datetime.strptime(data[1], "%Y-%m-%d") for data in max] 
+        max_values = [float(data[0].replace('\x00','')) if type(data[0]) == str else data[0] for data in maxmin]
+        min_values = [float(data[1].replace('\x00','')) if type(data[1]) == str else data[1] for data in maxmin]
+        dates = [datetime.datetime.strptime(data[2], "%Y-%m-%d") for data in maxmin] 
 
         # Append data to graphs to be plotted
         graphs.append({'probe_id': probe[0], 'probe': probe[1], 'capability_id': capability[0], 'capability': capability[1], 'unit': capability[2], 'max_values': max_values, 'min_values': min_values, 'dates': dates })

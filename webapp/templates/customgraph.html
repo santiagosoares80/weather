@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Custom graph
+{% endblock %}
+
+{% block main %}
+    <div class="mx-auto pt-4" style="width: 40%">
+        <h3 class="text-center">Select dates and capabilities to plot</h3>
+        <form action="/customgraph" id="customgraph" method="post">
+            <input type="hidden" name="probeid" id="probeid" value="{{ probeid }}" readonly>
+            <div class="row pt-4">
+                <div class="col align-self-start">
+                    <label for="start">Start date:</label>
+                    <input type="date" id="start" name="start" min="{{ mindate }}" max="{{ maxdate }}">
+                </div>
+                <div class="col align-self-end">
+	            <label for="end">End date:</label>
+                    <input type="date" id="end" name="end" min="{{ mindate }}" max="{{ maxdate }}">
+                </div>
+            </div>
+            <div class="pt-4">
+                {% for capability in capabilities %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="{{ capability[0] }}" id="{{ capability[0] }}" name="cap{{ capability[0] }}">
+                        <label class="form-check-label" for="{{ capability[0] }}">
+                            {{ capability[1] }}
+                            <img src="{{ capability[2] }}">
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="text-center pt-4">
+                <button class="btn btn-info" type="submit">Plot</button>        
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="/static/customgraph.js"></script>
+{% endblock %}
