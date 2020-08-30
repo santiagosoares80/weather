@@ -7,3 +7,4 @@ webapp/key.pem
 secret_keys.py
 snmp
 weather_dump.sql
+cpu
