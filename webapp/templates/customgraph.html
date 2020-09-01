@@ -35,6 +35,11 @@
             </div>
         </form>
     </div>
+    <div class="mx-auto pt-4" style="width: 80%">
+        {% for graph in graphs %}
+            <img src="data:image/png;base64,{{ graph }}"/>
+	{% endfor %}
+    </div>
 {% endblock %}
 
 {% block script %}

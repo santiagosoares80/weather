@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, session
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+
 import sqlite3
 import datetime
 import matplotlib.pyplot as plt
@@ -8,6 +9,8 @@ import io
 import base64
 import os
 import secrets
+
+from custom_graph import custom_graph
 from functools import wraps
 
 app = Flask (__name__)
@@ -899,7 +902,47 @@ def custom():
 
 	# User reaches via POST method
 	if request.method == "POST":
-		return redirect("/")
+
+		# Get probe to plot
+		probeid = request.form.get("probeid")
+
+		# Check if dates are not empty
+		if not request.form.get("start") or not request.form.get("end"):
+			flash("Both start and end dates must be provided")
+			return redirect(url_for("custom", probeid = probeid))
+
+		startdate = datetime.datetime.fromisoformat(request.form.get("start"))
+		enddate= datetime.datetime.fromisoformat(request.form.get("end"))
+
+		# Check if end date is greater than start date
+		if enddate < startdate:
+			flash("End date must be greater tha start date")
+			return redirect(url_for("custom", probeid = probeid))
+
+		# Open connection with database
+		conn = db_connect()
+		c = conn.cursor()
+
+		# Get capabilities of the probe
+		capabilities = c.execute("SELECT capability_id FROM probe_capabilities WHERE probe_id = ?", (probeid,)).fetchall()
+
+		# Close database connection
+		conn.close()
+
+		# Check which capabilities user wants to plot
+		capstoplot = []
+		for capability in capabilities:
+			if request.form.get(f"cap{capability[0]}"):
+				capstoplot.append(capability[0])
+
+		# Check if at least one capability was selected
+		if len(capstoplot) == 0:
+			flash("At least one capability must be selected")
+			return redirect(url_for("custom", probeid = probeid))
+
+		graphs = custom_graph(probeid, capstoplot, startdate, enddate)
+
+		return render_template("showcustom.html", graphs = graphs, startdate = startdate, enddate = enddate)
 
 	else:
 		# Gets probe id

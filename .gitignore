@@ -8,3 +8,5 @@ secret_keys.py
 snmp
 weather_dump.sql
 cpu
+webapp/__pycache__/*
+receiver/*

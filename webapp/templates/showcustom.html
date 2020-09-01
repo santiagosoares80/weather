@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Custom graph
+{% endblock %}
+
+{% block main %}
+<div class="mx-auto pt-4">
+    <div class="row">
+        <h3>Data from {{ startdate.strftime("%d-%m-%Y") }} to {{ enddate.strftime("%d-%m-%Y") }}</h3>
+    </div>
+    <div class="row">
+        {% for graph in graphs %}
+            <img src="data:image/png;base64,{{ graph }}"/>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{% endblock %}
