@@ -1,3 +1,5 @@
+#include <Adafruit_BMP280.h>
+
 #include "DHT.h"
 #include <RH_ASK.h>
 #include <RHDatagram.h>
@@ -9,7 +11,7 @@
 #define RXPIN 13
 #define TXPIN 12
 #define SPEED 2000
-#define MYADDRESS 0x0A
+#define MYADDRESS 0x0D
 #define SERVER 0x01
 #define REBOOTMESSAGE "REBOOT"
 #define CLEARFLAG 0xFF
@@ -20,6 +22,8 @@
 DHT dht(DHTPIN, DHTTYPE);
 RH_ASK radio(SPEED, RXPIN, TXPIN);
 RHDatagram manager(radio, MYADDRESS);
+
+Adafruit_BMP280 sensor_bmp;
 
 //Set initial value of message id
 uint8_t id = 0;
@@ -53,7 +57,13 @@ void setup() {
     //Waits 200ms to try again
     delay(500);
   }
-  
+
+  //Initialize BMP280
+  Serial.println(F("Initializing BMP280 sensor"));
+  if (!sensor_bmp.begin(0x76))
+  {
+    Serial.println(F("Failed to initialize sensor!"));
+  }
 }
 
 void loop() {
@@ -69,13 +79,25 @@ void loop() {
     Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
-  
+
+  // Read temperature as Celsius from BMP280
+  float t_280 = sensor_bmp.readTemperature();
+
+  // Read atmospheric pressure from BMP280 in hPa
+  float p = sensor_bmp.readPressure() / 10;
+
   // Print to Serial 
   Serial.print(F("Humidity: "));
   Serial.print(h);
   Serial.print(F("%  Temperature: "));
   Serial.print(t);
   Serial.println(F("°C "));
+  Serial.print(F("Temperature BMP280: "));
+  Serial.print(t_280);
+  Serial.print(F("ºC Pressure: "));
+  Serial.print(p);
+  Serial.println(F("hPa"));
+  
 
   // Convert floats to strings
   char temp[5];
@@ -121,6 +143,6 @@ void loop() {
   //Increments message id
   id++;
 
-  // Wait a 15 minutes between measurements.
-  delay(900000);
+  // Wait a 10 seconds between measurements.
+  delay(10000);
 }
