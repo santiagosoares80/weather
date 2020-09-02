@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Add capability
+{% endblock %}
+
+{% block main %}  
+    <div class="row justify-content-center pt-4">
+        <div class="col-3">
+            <form action="/addcap" id="addcap" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="capability">Capability</label>
+                    <input autocomplete="off" autofocus class="form-control" name="capability" id="capability" placeholder="Capability" type="text" aria-describedby="capabilityHelp">
+                    <!--<small id="capabilityHelp" class="form-text text-muted">A name that describes the physical quantity you're going to measure.</small>-->
+                </div> 
+                <div class="form-group"> 
+                    <label for="unit">Unit</label>
+                    <input autocomplete="off" class="form-control" name="unit" placeholder="Unit" id="unit" type="text" aria-describedby="unitHelp">
+                    <!--<small id="unitHelp" class="form-text text-muted">The symbol of the unit of measurement of your capability.(e.g.: m for meters.</small>-->                 
+                </div>
+		<div class="custom-file">
+		    <input type="file" class="custom-file-input" name="icon" id="icon" aria-describedby="iconHelp">
+		    <label class="custom-file-label" for="icon">Choose icon file</label>
+                    <small id="iconHelp" class="form-text text-muted">The icon must be a 32px png file.</small>                 		    
+		</div>
+            </form> 
+            <form action="/capabilities" id="cancel"/>
+                <div class="text-center pt-4">
+                    <button class="btn btn-danger" type="submit" form="cancel">Cancel</button>
+                    <button class="btn btn-info" type="submit" form="addcap">Add</button>
+                </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="/static/addcap.js"></script>
+{% endblock %}

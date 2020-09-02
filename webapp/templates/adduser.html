@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Add user
+{% endblock %}
+
+{% block main %}  
+    <div class="row justify-content-center pt-4">
+        <div class="col-7">
+            <form action="/adduser" method="post" id="adduser">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input autocomplete="off" autofocus class="form-control" style="width: 100%;" name="username" id="username" placeholder="Username" type="text" autocapitalize="off" aria-describedby="usernameHelp">
+                    <!--<small id="capabilityHelp" class="form-text text-muted">A name that describes the physical quantity you're going to measure.</small>-->
+                </div> 
+                <div class="form-group"> 
+                    <label for="firstname">First name</label>
+                    <input autocomplete="off" class="form-control" style="width: 100%;" name="firstname" placeholder="First Name" id="firstname" type="text" autocapitalize="words" aria-describedby="firstNameHelp">
+                    <!--<small id="unitHelp" class="form-text text-muted">The symbol of the unit of measurement of your capability.(e.g.: m for meters.</small>-->                 
+                </div> 
+                <div class="form-group"> 
+                    <label for="lastname">Last name</label>
+                    <input autocomplete="off" class="form-control" style="width: 100%;" name="lastname" placeholder="Last Name" id="lastname" type="text" autocapitalize="words" aria-describedby="lastNameHelp">
+                    <!--<small id="unitHelp" class="form-text text-muted">The symbol of the unit of measurement of your capability.(e.g.: m for meters.</small>-->                 
+                </div>  
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="administrator" id="admin" name="admin">
+                    <label class="form-check-label" for="admin">Administrator</label>
+                </div>
+            </form>
+            <form action="/users" id="cancel"/>
+                 <div class="text-center">
+                    <button class="btn btn-danger" type="submit" form="cancel">Cancel</button>
+                    <button class="btn btn-info" type="submit" form="adduser">Add</button>
+                </div>
+            <h6>The system will generate a random password for the user, which wil be shown in the next screen.</h6>
+            <h6>Don't forget to take note of it!</h6>
+        </div>
+    </div>
+{% endblock %}

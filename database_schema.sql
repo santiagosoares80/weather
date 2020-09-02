@@ -1,12 +1,14 @@
 CREATE TABLE probes (
 	id INTEGER NOT NULL PRIMARY KEY,
-	description TEXT NOT NULL
+	description TEXT NOT NULL,
+	prbimg TEXT
 );
 
 CREATE TABLE capabilities (
 	id INTEGER NOT NULL PRIMARY KEY,
 	description TEXT NOT NULL,
-	unit TEXT
+	unit TEXT,
+	icon TEXT
 );
 
 CREATE TABLE event_types (
@@ -40,6 +42,16 @@ CREATE TABLE measurements (
 	value REAL NOT NULL,
 	datetime TEXT NOT NULL,
 	FOREIGN KEY (probe_id, measurement_type) REFERENCES probe_capabilities(probe_id, capability_id)
+);
+
+CREATE TABLE users (
+	id INTEGER NOT NULL PRIMARY KEY,
+	first_name TEXT,
+	last_name TEXT,
+	username TEXT NOT NULL,
+	hash TEXT NOT NULL,
+	admin INTEGER NOT NULL,
+	chgpwd INTEGER DEFAULT 1 NOT NULL
 );
 
 CREATE INDEX measurement ON measurements(measurement_type, probe_id, datetime);

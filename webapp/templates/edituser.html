@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Edit user
+{% endblock %}
+
+{% block main %}  
+    <div class="row justify-content-center pt-4">
+        <div class="col-7">
+            <form action="/edituser" method="post" id="edituserform">
+		<input type="hidden" name="userid" id="userid"  value="{{ userid }}" readonly>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input autocomplete="off" class="form-control" style="width: 100%;" name="username" id="username" type="text" aria-describedby="usernameHelp" value="{{ username }}" readonly>
+                    <small id="capabilityHelp" class="form-text text-muted">Cannot change username.</small>
+                </div> 
+                <div class="form-group"> 
+                    <label for="firstname">First name</label>
+                    <input autocomplete="off" class="form-control" style="width: 100%;" name="firstname" id="firstname" type="text" aria-describedby="firstNameHelp" value="{{ firstname }}">
+                    <!--<small id="unitHelp" class="form-text text-muted">The symbol of the unit of measurement of your capability.(e.g.: m for meters.</small>-->                 
+                </div> 
+                <div class="form-group"> 
+                    <label for="lastname">Last name</label>
+                    <input autocomplete="off" class="form-control" style="width: 100%;" name="lastname" id="lastname" type="text" aria-describedby="lastNameHelp" value="{{ lastname }}">
+                    <!--<small id="unitHelp" class="form-text text-muted">The symbol of the unit of measurement of your capability.(e.g.: m for meters.</small>-->                 
+                </div>  
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="administrator" id="admin" name="admin" {{ 'checked="checked"' if admin else ""}}>
+                    <label class="form-check-label" for="admin">Administrator</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="chgpwd" id="chgpwd" name="chgpwd" {{ 'checked="checked"' if chgpwd else ""}}>
+                    <label class="form-check-label" for="chgpwd">Force user to change password on next login.</label>
+                </div>
+            </form>
+            <div class="text-center pt-4">
+            <form action="/users" id="cancel"/>
+                <button class="btn btn-danger" type="submit" form="cancel">Cancel</button>
+            <button class="btn btn-info" type="submit" form="edituserform">Save</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}

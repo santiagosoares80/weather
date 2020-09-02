@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Graphs for probe {{ probe }}
+{% endblock %}
+
+{% block main %}
+<div class="container">
+    <div class="row">
+        <h3>Last 24h</h3>
+    </div>
+    <div class="row">
+        {% for capability in capabilities %}
+            <div class="col">
+                <img src="/static/images/{{ probe }}_{{ capability }}_1.png">
+            </div>
+        {% endfor %}
+    </div>
+    <div class="row">
+        <h3>Last 7 days</h3>
+    </div>
+    <div class="row">    
+        {% for capability in capabilities %}
+            <div class="col">
+                <img src="/static/images/{{ probe }}_{{ capability }}_7.png">
+            </div>
+        {% endfor %}
+    </div>
+    <div class="row">
+        <h3>Last 30 days</h3>
+    </div>
+    <div class="row">    
+        {% for capability in capabilities %}
+            <div class="col">
+                <img src="/static/images/{{ probe }}_{{ capability }}_30_maxmin.png">
+            </div>
+        {% endfor %}
+    </div>
+    <div class="row">
+        <h3>Last year</h3>
+    </div>
+    <div class="row">
+        {% for capability in capabilities %}
+            <div class="col">
+                <img src="/static/images/{{ probe }}_{{ capability }}_365_maxmin.png">
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

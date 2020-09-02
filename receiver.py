@@ -3,8 +3,6 @@ import vw
 import time
 import sqlite3
 
-from datetime import datetime
-
 #GPIO pin for receiver
 RXPin = 27
 
@@ -75,12 +73,12 @@ while True:
 
 	#It's a control message (flags > 15)
 	if flags > 15:
-		c.execute("INSERT INTO events (event_type_id, probe_id, log, datetime) VALUES (?, ?, ?, ?)", 
-				(flags, probe, content, datetime.now().strftime("%H:%M:%S %d/%m/%y")))
+		c.execute("INSERT INTO events (event_type_id, probe_id, log, datetime) VALUES (?, ?, ?, datetime('now', 'localtime'))", 
+				(flags, probe, content))
 	#It's a measurement
 	else:
-		c.execute("INSERT INTO measurements (measurement_type, probe_id, value, datetime) VALUES (?, ?, ?, ?)",
-				(flags, probe, content, datetime.now().strftime("%H:%M:%S %d/%m/%y")))
+		c.execute("INSERT INTO measurements (measurement_type, probe_id, value, datetime) VALUES (?, ?, ?, datetime('now', 'localtime'))",
+				(flags, probe, content))
 
 	#Commit and close connection
 	conn.commit()

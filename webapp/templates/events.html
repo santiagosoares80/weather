@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Events
+{% endblock %}
+
+{% block main %}
+    <div class="mx-auto pt-4" style="width: 50%">
+    <table class="table text-center">
+        <thead class="thead-light">
+            <tr>
+                <th>#</th>
+                <th>Event</th>
+                <th style="width: 2%"></th>
+                <th style="width: 2%"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event_type in event_types %}
+                <tr>
+                    <td>{{ event_type[0] }}</td>
+                    <td>{{ event_type[1] }}</td>
+                    <form action="/editevent">
+                        <input type="hidden" name="eventtypeid" value="{{ event_type[0] }}"/>
+                        <td><button type="submit" class="btn btn-sm btn-outline-light"><img src="/static/icons/pencil.png"></button></td>
+                    </form>
+                    <td><button type="button" class="btn btn-sm btn-outline-light" data-toggle="modal" data-target="#eventdelModal" data-eventtype="{{ event_type[0] }}"><img src="/static/icons/close.png"></button></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="text-center">
+        <a class="btn btn-info" role="button" href="/addevent">Add event type</a>
+    </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="eventdelModal" tabindex="-1" aria-labelledby="eventdelModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eventdelModalLabel">Warning!</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    You're about to delete the event type! Are you sure?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-info" id="confirm-del-event">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>          
+{% endblock %}
+
+{% block script %}
+    <script src="/static/events.js"></script>
+{% endblock %}
