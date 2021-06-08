@@ -6,8 +6,10 @@
 
 {% block main %}
   <div class="card-deck">
-      {% for card in cards %}  
-          <div class="card" style="max-width: 18rem;">
+      <div class="row">
+	{% for card in cards %}
+	<div class="mt-3 col-xl-3 col-md-4 col-sm-6 card-group">  
+          <div class="card">
             <img src="{{ card [3] }}" class="card-img-top pt-3" alt="Probe Image">
             <div class="card-body">
               <h5 class="card-title">{{ card[1] }}</h5>
@@ -17,23 +19,26 @@
             </div>
             <div class="card-footer">
                 <div class="row">
-                <div class="col align-self-start">
+                <div class="col-6 mb-2 d-flex justify-content-center">
                     <a href="/customgraph?probeid={{ card[0] }}" class="btn btn-info">Custom</a>
                 </div>
-                <div class="col align-self-end">
+                <div class="col-6 mb-2 d-flex justify-content-center">
                     <a href="/graphs?probe={{ card[0] }}" class="btn btn-info">Graphs</a>
                 </div>
                 </div>
             </div>
           </div>
-      {% endfor %}
+	</div>
+        {% endfor %}
+      </div>
     </div>
 
   <div class="pt-4"><h5>Legend:</h5></div>
-  <table>
+  <div class="row border border-secondary border-1 rounded rounded-3">
     {% for capability in capabilities %}
-        <td><img src="{{ capability[1] }}">:</td>
-        <td class="pr-4">{{ capability[0] }}</td>
+      <div class="mt-1 mb-1 col-lg-3 col-md-4 col-sm-6">  
+        <img src="{{ capability[1] }}">: {{ capability[0] }}
+      </div>
     {% endfor %}
-    </table>
+  </div>
 {% endblock %}
