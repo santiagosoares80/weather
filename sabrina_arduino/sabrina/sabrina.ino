@@ -1,7 +1,6 @@
+#include <LowPower.h>
 
 #include <Adafruit_PCD8544.h>
-
-#include <Adafruit_BMP280.h>
 
 #include "DHT.h"
 #include <RH_ASK.h>
@@ -13,23 +12,20 @@
 
 #define RXPIN 13
 #define TXPIN 12
-#define BTNPIN 2
-#define BACKLIGHT 9
+#define POWERPIN 10
 #define SPEED 2000
-#define MYADDRESS 0x0A
+#define MYADDRESS 0x0D
 #define SERVER 0x01
 #define REBOOTMESSAGE "Probe reboot!"
 #define CLEARFLAG 0xFF
 #define CONTROLFLAG 0x10
 #define TEMPFLAG 0x01
 #define HUMIDFLAG 0x02
-#define PRESSFLAG 0x07
+
 
 DHT dht(DHTPIN, DHTTYPE);
 RH_ASK radio(SPEED, RXPIN, TXPIN);
 RHDatagram manager(radio, MYADDRESS);
-
-Adafruit_BMP280 sensor_bmp;
 
 // Pins to display Nokia 5110
 // pin 7 - Serial clock out (SCLK)
@@ -46,28 +42,47 @@ uint8_t id = 0;
 // https://www.filipeflop.com/blog/estacao-meteorologica-com-arduino/
 // Information about interruptions from:
 // https://www.instructables.com/id/Arduino-Timer-Interrupts/
+// Read VCC function from:
+// https://code.google.com/archive/p/tinkerit/wikis/SecretVoltmeter.wiki
+// Power saving techniques:
+// http://www.gammon.com.au/power
 
-//Set display on
-boolean displayon;
 
 // Weather variables
-float h, t, p, rp;
+float h, t;
+
+// Battery voltage
+long vcc;
+
+// Timer counter
+int counter;
 
 //Strings to transmit using radio
 char humidity[5];
 char temp[6];
-char pressure[10];
+
+// 'baby', 39x23px
+const unsigned char baby [] PROGMEM = {
+ 0x00, 0x03, 0x83, 0x80, 0x00, 0x00, 0x03, 0xff, 0x80, 0x00, 0x00, 0x03, 0x6d, 0x80, 0x00, 0x00, 
+  0x03, 0x7f, 0x80, 0x00, 0x00, 0x03, 0xff, 0x80, 0x00, 0x00, 0x07, 0xef, 0xc0, 0x00, 0x00, 0x0e, 
+  0x6c, 0xe0, 0x00, 0x00, 0x1c, 0x6c, 0x70, 0x00, 0x00, 0x30, 0x3c, 0x18, 0x00, 0x00, 0x30, 0x10, 
+  0x18, 0x00, 0x00, 0x20, 0x00, 0x08, 0x00, 0x00, 0x60, 0x00, 0x0c, 0x00, 0x00, 0xe3, 0x83, 0x8e, 
+  0x00, 0x00, 0x83, 0xc7, 0x82, 0x00, 0x00, 0xe2, 0xc6, 0x8e, 0x00, 0x00, 0x60, 0x00, 0x0c, 0x00, 
+  0x00, 0x20, 0x00, 0x08, 0x00, 0x00, 0x31, 0xc7, 0x18, 0x00, 0x00, 0x30, 0xfe, 0x18, 0x00, 0x00, 
+  0x1c, 0x38, 0x70, 0x00, 0x00, 0x0e, 0x00, 0xe0, 0x00, 0x00, 0x07, 0xc7, 0xc0, 0x00, 0x00, 0x01, 
+  0xff, 0x00, 0x00
+};
 
 void setup() {
   Serial.begin(9600);
 
-  //Turn display backlight on for initialization
-  pinMode(BACKLIGHT, OUTPUT);
-  digitalWrite(BACKLIGHT, LOW);
+  //Power up radio and DHT11 sensor
+  pinMode(POWERPIN, OUTPUT);
+  digitalWrite(POWERPIN, LOW);
   
   Serial.println(F("Initializing Display"));
   display.begin();
-  display.setContrast(30);
+  display.setContrast(40);
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(BLACK);
@@ -80,14 +95,6 @@ void setup() {
   Serial.println(F("Starting DHT11"));
   dht.begin();
 
-  //Initialize BMP280
-  Serial.println(F("Initializing BMP280 sensor"));
-  while (!sensor_bmp.begin(0x76))
-  {
-    Serial.println(F("Failed to initialize sensor!"));
-    delay(1000);
-  }
-  
   Serial.println(F("Starting Radio Manager"));
   while (!manager.init()) {
     Serial.println(F("Failed to initilize manager!"));
@@ -114,10 +121,6 @@ void setup() {
     delay(500);
   }
 
-  // Interruption to light the display
-  pinMode(BTNPIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BTNPIN), light, FALLING);
-
   // Draw display interface
   display.clearDisplay();
   display.setTextSize(1);
@@ -142,71 +145,53 @@ void setup() {
   display.setCursor(75,14);
   display.println(F("%"));  
 
-  // Atmospheric pressure rectangle
-  display.drawRoundRect(0, 25, 84, 23, 3, 2);
-  display.setCursor(19,28); 
-  display.println(F("PRESSURE"));
-  display.setCursor(55,38);
-  display.println(F("hPa"));
-  display.setCursor(11,38);
-  display.println(F("------")); 
+  // Battery rectangle
+  display.drawRoundRect(0, 25, 44, 23, 3, 2);
+  display.setCursor(11,28); 
+  display.println(F("BATT"));
+  display.setCursor(5,38);
+  display.println(F("----"));
+  display.setCursor(29,38);
+  display.println(F("mV")); 
+
+  // Draw baby
+  display.drawBitmap(45, 25,  baby, 39, 23, BLACK);
   display.display();
-
-  cli();//stop interrupts
-  // Timer interruption to turn display off
-  //set timer1 interrupt at 0.25Hz
-  TCCR1A = 0;// set entire TCCR1A register to 0
-  TCCR1B = 0;// same for TCCR1B
-  TCNT1  = 0;//initialize counter value to 0
-  // set compare match register for 0.25hz increments
-  OCR1A = 62499;// = [(16*10^6) / (0.25*1024) ]- 1 (must be <65536)
-  // turn on CTC mode
-  TCCR1B |= (1 << WGM12);
-  // Set CS10 and CS12 bits for 1024 prescaler
-  TCCR1B |= (1 << CS12) | (1 << CS10);  
-  // disable timer compare interrupt
-  TIMSK1 |= (1 << OCIE1A);
-  sei();//alLOW interrupts
-
-  // Turns display on again after initialization of interruptions
-  // It will be turned of by interruption
-  digitalWrite(BACKLIGHT, LOW);
-  displayon = 1;
 
 }
 
 void loop() {
 
+  //Power up radio and DHT11 sensor and wait a little for the devices to power up
+  digitalWrite(POWERPIN, LOW);
+  delay(2000);
+
   // Read humidity from DHT11
   h = dht.readHumidity();
 
   // Read temperature as Celsius from BMP280
-  t = sensor_bmp.readTemperature();
+  t = dht.readTemperature();
 
-  // Read atmospheric pressure from BMP280 in hPa
-  p = sensor_bmp.readPressure();
-
-  // Failed to read any of the sensors
-  if (isnan(h) || isnan(t) || isnan(p)) {
-    Serial.println(F("Failed to read from sensors!"));
+  // Failed to read any of the
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from sensor!"));
     return;
   }
 
-  // Calculate reduced pressure at sea level
-  // Uses normalized pressure 9108.3, obtained by the equation
-  // P = 1013.25*exp(-0.00012h)
-  // where h is the height, considered 888m
-  rp = 1013.15*p/9108.3/10;
+  // Read battery voltage
+  vcc = readVcc();
   
   // Print to Serial 
   Serial.print(F("Humidity: "));
   Serial.print(h);
   Serial.println(F("%"));
-  Serial.print(F("Temperature BMP280: "));
+  Serial.print(F("Temperature: "));
   Serial.print(t);
-  Serial.print(F("ºC Pressure: "));
-  Serial.print(rp);
-  Serial.println(F("hPa"));
+  Serial.println(F("ºC"));
+  Serial.print(F("VCC: "));
+  Serial.print(vcc);
+  Serial.println(F("mV"));
+
 
   // Refresh display with new values
   // Temperature 
@@ -218,19 +203,18 @@ void loop() {
   display.fillRect(50, 13, 23 , 10, 0);
   display.setCursor(50,14);
   display.println(h,1); 
-   
-  // Atmospheric pressure
-  display.fillRect(4, 37, 50 , 10, 0);
-  display.setCursor(11,38);
-  display.println(rp,2); 
 
+  // Voltage
+  display.fillRect(4, 38, 24 , 9, 0);
+  display.setCursor(4,38);
+  display.println(vcc,1);
+  
   // Refresh display
   display.display();
 
   // Convert floats to strings
   dtostrf(h, 3, 1, humidity);
   dtostrf(t, 5, 1, temp);
-  dtostrf(rp, 9, 1, pressure);
 
   //Set message ID
   manager.setHeaderId((uint8_t)id);
@@ -267,43 +251,34 @@ void loop() {
     delay(500);
   }
 
-  //Set flag to pressure message
-  manager.setHeaderFlags(PRESSFLAG, CLEARFLAG);
-
-  // Try 5 times to transmit pressure
-  for (int i = 0; i < 5; i++) {
-    //Send message
-    if(!manager.sendto((uint8_t*)pressure, sizeof(pressure), SERVER)) {
-      Serial.println(F("Transmission of pressure failed!"));
-      return;
-    }
-    //Waits message to be transmited
-    manager.waitPacketSent();  
-    //Waits 500ms to try again 
-    delay(500);
-  }
-
   //Increments message id
   id++;
 
-  // Wait a 10 seconds between measurements.
-  delay(890800);
-}
+  //Power down peripherals to save energy
+  digitalWrite(POWERPIN, HIGH);
 
-//Function that turns display lights on
-void light()
-{
-  digitalWrite(BACKLIGHT, LOW);
-  TCNT1 = 0;
-  displayon = 1;
-}
-
-//Function that turn display light off after 4 seconds
-ISR(TIMER1_COMPA_vect)
-{
-  if(displayon)
+  counter = 0;
+  while(counter < 10)
   {
-    digitalWrite(BACKLIGHT, HIGH);
-    displayon = 0;
+    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+    counter++;
   }
+}
+
+long readVcc()
+{ 
+  long result; 
+  
+  // Read 1.1V reference against AVcc 
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1); 
+  delay(2); // Wait for Vref to settle 
+  
+  ADCSRA |= _BV(ADSC); 
+  
+  // Convert 
+  while (bit_is_set(ADCSRA,ADSC)); 
+  result = ADCL; 
+  result |= ADCH<<8; 
+  result = 1126400L / result; // Back-calculate AVcc in mV 
+  return result; 
 }
