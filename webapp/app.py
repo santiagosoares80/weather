@@ -119,9 +119,10 @@ def index():
 
 		# Remove '\x00' from end of values and format time of last measurement
 		for data in lastdata:
-			if data[1] and data[3]:
+			if data[1]:
 				if type(data[1]) == str:
 					data[1] = data[1].replace('\x00','')
+			if data[3]:
 				data[3] = datetime.datetime.strptime(data[3], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
 
 		# Insert each probe with the last measurements to the cards list

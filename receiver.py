@@ -73,12 +73,18 @@ while True:
 
 	#It's a control message (flags > 15)
 	if flags > 15:
-		c.execute("INSERT INTO events (event_type_id, probe_id, log, datetime) VALUES (?, ?, ?, datetime('now', 'localtime'))", 
+		try:
+			c.execute("INSERT INTO events (event_type_id, probe_id, log, datetime) VALUES (?, ?, ?, datetime('now', 'localtime'))", 
 				(flags, probe, content))
+		except sqlite3.IntegrityError:
+			print("Database integrity error.")
 	#It's a measurement
 	else:
-		c.execute("INSERT INTO measurements (measurement_type, probe_id, value, datetime) VALUES (?, ?, ?, datetime('now', 'localtime'))",
+		try:
+			c.execute("INSERT INTO measurements (measurement_type, probe_id, value, datetime) VALUES (?, ?, ?, datetime('now', 'localtime'))",
 				(flags, probe, content))
+		except sqlite3.IntegrityError:
+			print("Database integrity error.")
 
 	#Commit and close connection
 	conn.commit()
